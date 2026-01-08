@@ -77,18 +77,7 @@ function updateWranglerJsonc() {
 }
 
 function runSetupCommands() {
-    const commands = [
-    "bun add file-saver@^2.0.5",
-    "bun add @types/file-saver@^2.0.7",
-    "bun add xml-js@^1.6.11",
-    "bun add @dnd-kit/utilities",
-    "bun add @dnd-kit/core @dnd-kit/utilities",
-    "bun add @radix-ui/react-tooltip",
-    "bun add -D electron-builder",
-    "bun add react-hotkeys-hook",
-    "bun add electron-builder --dev",
-    "bun add date-fns"
-];
+    const commands = [];
     
     if (commands.length === 0) {
         console.log('⊘ No setup commands to run');

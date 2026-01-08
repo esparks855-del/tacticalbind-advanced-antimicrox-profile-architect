@@ -1,0 +1,23 @@
+{
+  "appId": "com.tacticalbind.architect",
+  "productName": "TacticalBind Architect",
+  "directories": {
+    "output": "dist_electron"
+  },
+  "files": [
+    "dist/**/*",
+    "main.js",
+    "preload.js",
+    "package.json"
+  ],
+  "win": {
+    "target": "nsis",
+    "icon": "public/icon.ico"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true
+  }
+}
