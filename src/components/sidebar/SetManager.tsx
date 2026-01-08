@@ -1,12 +1,14 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { useProfileStore } from '@/store/profileStore';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Layers, Trash2, Download, FileText, Save, Upload } from 'lucide-react';
+import { Plus, Layers, Trash2, Download, FileText, Save, Upload, Settings2, FileCode } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { generateAntiMicroXXML } from '@/utils/antimicroxExporter';
 import { saveAs } from 'file-saver';
 import { toast } from 'sonner';
+import { ControllerSettingsModal } from '@/components/modals/ControllerSettingsModal';
+import { XmlPreviewModal } from '@/components/modals/XmlPreviewModal';
 export function SetManager() {
   const profile = useProfileStore(s => s.profile);
   const actions = useProfileStore(s => s.actions);
@@ -17,6 +19,8 @@ export function SetManager() {
   const setImporterOpen = useProfileStore(s => s.setImporterOpen);
   const loadProject = useProfileStore(s => s.loadProject);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isSettingsOpen, setSettingsOpen] = useState(false);
+  const [isPreviewOpen, setPreviewOpen] = useState(false);
   const handleExportXML = () => {
     try {
       const xml = generateAntiMicroXXML(profile, actions);
@@ -69,11 +73,22 @@ export function SetManager() {
   };
   return (
     <div className="flex flex-col h-full bg-zinc-950 border-r border-zinc-800">
-      <div className="p-4 border-b border-zinc-800">
-        <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-          <Layers className="w-4 h-4" />
-          Mission Sets
-        </h2>
+      <div className="p-4 border-b border-zinc-800 space-y-4">
+        <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
+            <Layers className="w-4 h-4" />
+            Mission Sets
+            </h2>
+            <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-6 w-6 text-zinc-500 hover:text-amber-500"
+                onClick={() => setSettingsOpen(true)}
+                title="Controller Settings"
+            >
+                <Settings2 className="w-4 h-4" />
+            </Button>
+        </div>
         <Button
           onClick={() => addSet(`Set ${profile.sets.length + 1}`)}
           className="w-full bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800"
@@ -155,15 +170,34 @@ export function SetManager() {
               <FileText className="w-4 h-4 mr-2" />
               Import Keybinds
             </Button>
-            <Button
-              className="w-full bg-amber-600 hover:bg-amber-700 text-white"
-              onClick={handleExportXML}
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Export Profile
-            </Button>
+            <div className="flex gap-2">
+                <Button
+                    variant="outline"
+                    size="icon"
+                    className="border-zinc-700 text-zinc-400 hover:text-blue-400 hover:border-blue-400 hover:bg-zinc-900"
+                    onClick={() => setPreviewOpen(true)}
+                    title="Preview XML"
+                >
+                    <FileCode className="w-4 h-4" />
+                </Button>
+                <Button
+                    className="flex-1 bg-amber-600 hover:bg-amber-700 text-white"
+                    onClick={handleExportXML}
+                >
+                    <Download className="w-4 h-4 mr-2" />
+                    Export
+                </Button>
+            </div>
         </div>
       </div>
+      <ControllerSettingsModal 
+        isOpen={isSettingsOpen} 
+        onClose={() => setSettingsOpen(false)} 
+      />
+      <XmlPreviewModal 
+        isOpen={isPreviewOpen} 
+        onClose={() => setPreviewOpen(false)} 
+      />
     </div>
   );
 }

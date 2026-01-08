@@ -28,6 +28,8 @@ interface ProfileState {
   addMacro: (name: string, steps: MacroStep[]) => void;
   updateMacro: (id: string, name: string, steps: MacroStep[]) => void;
   deleteMacro: (id: string) => void;
+  // Settings
+  updateDeadzone: (axis: string, value: number) => void;
 }
 const INITIAL_SET_ID = 'set-1';
 const createEmptySet = (id: string, name: string): Set => {
@@ -44,7 +46,8 @@ export const useProfileStore = create<ProfileState>((set) => ({
   actions: [],
   profile: {
     sets: [createEmptySet(INITIAL_SET_ID, 'Set 1')],
-    macros: []
+    macros: [],
+    deadzones: {}
   },
   activeSetId: INITIAL_SET_ID,
   selectedButtonId: null,
@@ -173,6 +176,15 @@ export const useProfileStore = create<ProfileState>((set) => ({
     profile: {
         ...state.profile,
         macros: state.profile.macros.filter(m => m.id !== id)
+    }
+  })),
+  updateDeadzone: (axis, value) => set((state) => ({
+    profile: {
+      ...state.profile,
+      deadzones: {
+        ...state.profile.deadzones,
+        [axis]: value
+      }
     }
   }))
 }));

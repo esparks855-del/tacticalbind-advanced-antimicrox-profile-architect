@@ -7,8 +7,8 @@ export type SlotType = 'tap' | 'hold' | 'double' | 'release';
 export interface Slot {
   type: SlotType;
   actionId?: string; // Reference to an Action
-  macroId?: string;  // Reference to a Macro (Phase 2)
-  modeShiftId?: string; // Reference to another Set ID (Phase 2)
+  macroId?: string;  // Reference to a Macro
+  modeShiftId?: string; // Reference to another Set ID
 }
 export interface ButtonMapping {
   id: string; // Matches ControllerButtonId
@@ -29,7 +29,9 @@ export interface Macro {
   name: string;
   steps: MacroStep[];
 }
+export type ControllerAxis = 'leftx' | 'lefty' | 'rightx' | 'righty' | 'lefttrigger' | 'righttrigger';
 export interface Profile {
   sets: Set[];
   macros: Macro[];
+  deadzones?: Record<string, number>; // Key is ControllerAxis, value is integer (0-32767)
 }
