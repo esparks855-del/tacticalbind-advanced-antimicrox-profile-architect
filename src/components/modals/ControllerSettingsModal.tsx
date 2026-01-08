@@ -19,8 +19,7 @@ const AXES = [
 ];
 export function ControllerSettingsModal({ isOpen, onClose }: ControllerSettingsModalProps) {
   const updateDeadzone = useProfileStore(s => s.updateDeadzone);
-  // We select the whole deadzones object. Since it's a small object, this is acceptable.
-  const deadzones = useProfileStore(s => s.profile.deadzones) || {};
+  const axisConfig = useProfileStore(s => s.profile.axisConfig) || {};
   const handleDeadzoneChange = (axis: string, value: number[]) => {
     updateDeadzone(axis, value[0]);
   };
@@ -44,7 +43,7 @@ export function ControllerSettingsModal({ isOpen, onClose }: ControllerSettingsM
           </div>
           <div className="grid gap-6">
             {AXES.map((axis) => {
-              const currentValue = deadzones[axis.id] || 0;
+              const currentValue = axisConfig[axis.id]?.deadZone || 0;
               return (
                 <div key={axis.id} className="space-y-3">
                   <div className="flex items-center justify-between">

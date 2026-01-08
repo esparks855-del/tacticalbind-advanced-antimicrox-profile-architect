@@ -13,7 +13,7 @@ interface ProfileState {
   // Actions
   setImporterOpen: (isOpen: boolean) => void;
   loadActions: (actions: Action[]) => void;
-  loadProject: (data: { profile: Profile, actions: Action[] }) => void;
+  loadProject: (data: { profile: any, actions: Action[] }) => void; // Using any for profile to handle migration
   resetProject: () => void;
   // Set Management
   addSet: (name: string) => void;
@@ -48,7 +48,7 @@ export const useProfileStore = create<ProfileState>((set) => ({
   profile: {
     sets: [createEmptySet(INITIAL_SET_ID, 'Set 1')],
     macros: [],
-    deadzones: {}
+    axisConfig: {}
   },
   activeSetId: INITIAL_SET_ID,
   selectedButtonId: null,
@@ -57,17 +57,30 @@ export const useProfileStore = create<ProfileState>((set) => ({
   loadActions: (newActions) => set((state) => ({
     actions: [...state.actions, ...newActions]
   })),
-  loadProject: (data) => set(() => ({
-    profile: data.profile,
-    actions: data.actions,
-    activeSetId: data.profile.sets[0]?.id || INITIAL_SET_ID,
-    selectedButtonId: null
-  })),
+  loadProject: (data) => set(() => {
+    // Migration for legacy deadzones
+    let profile = data.profile;
+    if (data.profile.deadzones && !data.profile.axisConfig) {
+        const axisConfig: Record<string, any> = {};
+        Object.entries(data.profile.deadzones).forEach(([k, v]) => {
+            axisConfig[k] = { deadZone: v };
+        });
+        profile = { ...data.profile, axisConfig };
+        // Remove legacy deadzones to clean up
+        delete profile.deadzones;
+    }
+    return {
+        profile,
+        actions: data.actions,
+        activeSetId: profile.sets[0]?.id || INITIAL_SET_ID,
+        selectedButtonId: null
+    };
+  }),
   resetProject: () => set(() => ({
     profile: {
         sets: [createEmptySet(INITIAL_SET_ID, 'Set 1')],
         macros: [],
-        deadzones: {}
+        axisConfig: {}
     },
     actions: [],
     activeSetId: INITIAL_SET_ID,
@@ -192,9 +205,12 @@ export const useProfileStore = create<ProfileState>((set) => ({
   updateDeadzone: (axis, value) => set((state) => ({
     profile: {
       ...state.profile,
-      deadzones: {
-        ...state.profile.deadzones,
-        [axis]: value
+      axisConfig: {
+        ...state.profile.axisConfig,
+        [axis]: {
+            ...state.profile.axisConfig?.[axis],
+            deadZone: value
+        }
       }
     }
   }))

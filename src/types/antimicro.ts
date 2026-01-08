@@ -30,8 +30,13 @@ export interface Macro {
   steps: MacroStep[];
 }
 export type ControllerAxis = 'leftx' | 'lefty' | 'rightx' | 'righty' | 'lefttrigger' | 'righttrigger';
+export interface AxisConfig {
+  deadZone?: number;
+  maxZone?: number;
+  diagonalRange?: number;
+}
 export interface Profile {
   sets: Set[];
   macros: Macro[];
-  deadzones?: Record<string, number>; // Key is ControllerAxis, value is integer (0-32767)
+  axisConfig: Record<string, AxisConfig>;
 }
