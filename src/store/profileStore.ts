@@ -14,6 +14,7 @@ interface ProfileState {
   setImporterOpen: (isOpen: boolean) => void;
   loadActions: (actions: Action[]) => void;
   loadProject: (data: { profile: Profile, actions: Action[] }) => void;
+  resetProject: () => void;
   // Set Management
   addSet: (name: string) => void;
   removeSet: (id: string) => void;
@@ -60,6 +61,16 @@ export const useProfileStore = create<ProfileState>((set) => ({
     profile: data.profile,
     actions: data.actions,
     activeSetId: data.profile.sets[0]?.id || INITIAL_SET_ID,
+    selectedButtonId: null
+  })),
+  resetProject: () => set(() => ({
+    profile: {
+        sets: [createEmptySet(INITIAL_SET_ID, 'Set 1')],
+        macros: [],
+        deadzones: {}
+    },
+    actions: [],
+    activeSetId: INITIAL_SET_ID,
     selectedButtonId: null
   })),
   addSet: (name) => set((state) => {

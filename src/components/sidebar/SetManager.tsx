@@ -2,13 +2,23 @@ import React, { useRef, useState } from 'react';
 import { useProfileStore } from '@/store/profileStore';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Layers, Trash2, Download, FileText, Save, Upload, Settings2, FileCode } from 'lucide-react';
+import { Plus, Layers, Trash2, Download, FileText, Save, Upload, Settings2, FileCode, RotateCcw, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { generateAntiMicroXXML } from '@/utils/antimicroxExporter';
 import { saveAs } from 'file-saver';
 import { toast } from 'sonner';
 import { ControllerSettingsModal } from '@/components/modals/ControllerSettingsModal';
 import { XmlPreviewModal } from '@/components/modals/XmlPreviewModal';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 export function SetManager() {
   const profile = useProfileStore(s => s.profile);
   const actions = useProfileStore(s => s.actions);
@@ -18,9 +28,11 @@ export function SetManager() {
   const removeSet = useProfileStore(s => s.removeSet);
   const setImporterOpen = useProfileStore(s => s.setImporterOpen);
   const loadProject = useProfileStore(s => s.loadProject);
+  const resetProject = useProfileStore(s => s.resetProject);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
   const [isPreviewOpen, setPreviewOpen] = useState(false);
+  const [isResetAlertOpen, setResetAlertOpen] = useState(false);
   const handleExportXML = () => {
     try {
       const xml = generateAntiMicroXXML(profile, actions);
@@ -71,6 +83,11 @@ export function SetManager() {
     };
     reader.readAsText(file);
   };
+  const handleResetConfirm = () => {
+    resetProject();
+    toast.info('Project reset to default state');
+    setResetAlertOpen(false);
+  };
   return (
     <div className="flex flex-col h-full bg-zinc-950 border-r border-zinc-800">
       <div className="p-4 border-b border-zinc-800 space-y-4">
@@ -79,9 +96,9 @@ export function SetManager() {
             <Layers className="w-4 h-4" />
             Mission Sets
             </h2>
-            <Button 
-                variant="ghost" 
-                size="icon" 
+            <Button
+                variant="ghost"
+                size="icon"
                 className="h-6 w-6 text-zinc-500 hover:text-amber-500"
                 onClick={() => setSettingsOpen(true)}
                 title="Controller Settings"
@@ -159,6 +176,15 @@ export function SetManager() {
                     onChange={handleLoadProject}
                 />
             </div>
+            <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-red-900 hover:text-red-500 hover:bg-red-950/30 text-xs h-7"
+                onClick={() => setResetAlertOpen(true)}
+            >
+                <RotateCcw className="w-3 h-3 mr-2" />
+                Reset Project
+            </Button>
         </div>
         <div className="space-y-2 pt-2 border-t border-zinc-900">
             <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider">Actions</h3>
@@ -170,34 +196,50 @@ export function SetManager() {
               <FileText className="w-4 h-4 mr-2" />
               Import Keybinds
             </Button>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-1 gap-2">
                 <Button
-                    variant="outline"
-                    size="icon"
-                    className="border-zinc-700 text-zinc-400 hover:text-blue-400 hover:border-blue-400 hover:bg-zinc-900"
+                    variant="secondary"
+                    className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700"
                     onClick={() => setPreviewOpen(true)}
-                    title="Preview XML"
                 >
-                    <FileCode className="w-4 h-4" />
+                    <FileCode className="w-4 h-4 mr-2" />
+                    View XML Code
                 </Button>
                 <Button
-                    className="flex-1 bg-amber-600 hover:bg-amber-700 text-white"
+                    className="w-full bg-amber-600 hover:bg-amber-700 text-white"
                     onClick={handleExportXML}
                 >
                     <Download className="w-4 h-4 mr-2" />
-                    Export
+                    Export .amgp
                 </Button>
             </div>
         </div>
       </div>
-      <ControllerSettingsModal 
-        isOpen={isSettingsOpen} 
-        onClose={() => setSettingsOpen(false)} 
+      <ControllerSettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setSettingsOpen(false)}
       />
-      <XmlPreviewModal 
-        isOpen={isPreviewOpen} 
-        onClose={() => setPreviewOpen(false)} 
+      <XmlPreviewModal
+        isOpen={isPreviewOpen}
+        onClose={() => setPreviewOpen(false)}
       />
+      <AlertDialog open={isResetAlertOpen} onOpenChange={setResetAlertOpen}>
+        <AlertDialogContent className="bg-zinc-950 border-zinc-800 text-zinc-100">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-500">
+                <AlertTriangle className="w-5 h-5" />
+                Reset Project?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-zinc-400">
+              This will wipe all sets, macros, and imported actions. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleResetConfirm} className="bg-red-900 text-red-100 hover:bg-red-800">Yes, Reset Everything</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

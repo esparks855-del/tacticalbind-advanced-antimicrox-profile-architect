@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -18,6 +18,9 @@ import { useProfileStore } from '@/store/profileStore';
 import { DraggableAction } from '@/components/dnd/DraggableAction';
 import { DraggableMacro } from '@/components/dnd/DraggableMacro';
 import { Action, Macro } from '@/types/antimicro';
+import { HelpModal } from '@/components/modals/HelpModal';
+import { Button } from '@/components/ui/button';
+import { LifeBuoy } from 'lucide-react';
 type DragItem =
   | { type: 'action'; data: Action }
   | { type: 'macro'; data: Macro };
@@ -26,6 +29,7 @@ export function EditorLayout() {
   const assignMacro = useProfileStore(s => s.assignMacro);
   const activeSetId = useProfileStore(s => s.activeSetId);
   const [activeDragItem, setActiveDragItem] = React.useState<DragItem | null>(null);
+  const [isHelpOpen, setHelpOpen] = useState(false);
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -81,8 +85,18 @@ export function EditorLayout() {
                 Tactical<span className="text-amber-500">Bind</span> Architect
               </h1>
             </div>
-            <div className="flex items-center gap-4">
-              <span className="text-xs text-zinc-500 font-mono">v1.0.0-BETA</span>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-zinc-400 hover:text-amber-500 gap-2"
+                onClick={() => setHelpOpen(true)}
+              >
+                <LifeBuoy className="w-4 h-4" />
+                <span className="hidden sm:inline">Briefing</span>
+              </Button>
+              <div className="h-4 w-px bg-zinc-800 mx-2" />
+              <span className="text-xs text-zinc-500 font-mono mr-2">v1.0.0-BETA</span>
               <ThemeToggle className="static transform-none" />
             </div>
           </header>
@@ -97,6 +111,7 @@ export function EditorLayout() {
         </aside>
         {/* Modals & Overlays */}
         <ActionImporter />
+        <HelpModal isOpen={isHelpOpen} onClose={() => setHelpOpen(false)} />
         <Toaster theme="dark" position="bottom-right" />
         <DragOverlay>
           {activeDragItem ? (
