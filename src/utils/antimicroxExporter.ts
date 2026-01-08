@@ -1,250 +1,153 @@
-/**
- * AntiMicroX Schema Version 2.20.2 Compliant Exporter
- * Generates valid .amgp XML files for controller mapping.
- */
-import { Profile, Slot, Action, Macro } from '@/types/antimicro';
-import { getAntiMicroXCode } from '@/utils/keyMap';
-import { APP_NAME } from '@/utils/projectIdentity';
-// Internal ID to AntiMicroX Element Mapping
-interface AntiMicroElement {
-  type: 'button' | 'stick' | 'trigger' | 'dpad';
-  index: number;
-  subIndex?: number; // For stickbutton, triggerbutton, dpadbutton
-}
-const MAPPING: Record<string, AntiMicroElement> = {
-  'A': { type: 'button', index: 1 },
-  'B': { type: 'button', index: 2 },
-  'X': { type: 'button', index: 3 },
-  'Y': { type: 'button', index: 4 },
-  'LB': { type: 'button', index: 5 },
-  'RB': { type: 'button', index: 6 },
-  'Back': { type: 'button', index: 7 },
-  'Start': { type: 'button', index: 8 },
-  'Guide': { type: 'button', index: 9 },
-  'LS': { type: 'button', index: 10 }, // L3
-  'RS': { type: 'button', index: 11 }, // R3
-  'P1': { type: 'button', index: 12 },
-  'P2': { type: 'button', index: 13 },
-  'P3': { type: 'button', index: 14 },
-  'P4': { type: 'button', index: 15 },
-  'DPadUp': { type: 'dpad', index: 1, subIndex: 1 },
-  'DPadRight': { type: 'dpad', index: 1, subIndex: 2 },
-  'DPadDown': { type: 'dpad', index: 1, subIndex: 4 },
-  'DPadLeft': { type: 'dpad', index: 1, subIndex: 8 },
-  'LT': { type: 'trigger', index: 5, subIndex: 2 },
-  'RT': { type: 'trigger', index: 6, subIndex: 2 },
-  // Stick Directions
-  // Index 1 = Left Stick, Index 2 = Right Stick
-  // SubIndex: 1=Up, 2=Right, 3=Down, 4=Left (AntiMicroX Standard)
-  'LS_Up': { type: 'stick', index: 1, subIndex: 1 },
-  'LS_Right': { type: 'stick', index: 1, subIndex: 2 },
-  'LS_Down': { type: 'stick', index: 1, subIndex: 3 },
-  'LS_Left': { type: 'stick', index: 1, subIndex: 4 },
-  'RS_Up': { type: 'stick', index: 2, subIndex: 1 },
-  'RS_Right': { type: 'stick', index: 2, subIndex: 2 },
-  'RS_Down': { type: 'stick', index: 2, subIndex: 3 },
-  'RS_Left': { type: 'stick', index: 2, subIndex: 4 },
+import { Profile, Set, ButtonMapping, Slot, Macro } from '@/types/antimicro';
+import { js2xml } from 'xml-js';
+// Mapping from internal ControllerButtonId to AntiMicroX button IDs
+const BUTTON_ID_MAP: Record<string, string> = {
+  'A': 'a',
+  'B': 'b',
+  'X': 'x',
+  'Y': 'y',
+  'LB': 'leftshoulder',
+  'RB': 'rightshoulder',
+  'LT': 'lefttrigger',
+  'RT': 'righttrigger',
+  'Back': 'back',
+  'Start': 'start',
+  'Guide': 'guide',
+  'LS': 'leftstick',
+  'RS': 'rightstick',
+  'DPadUp': 'dpup',
+  'DPadDown': 'dpdown',
+  'DPadLeft': 'dpleft',
+  'DPadRight': 'dpright',
+  'P1': 'paddle1',
+  'P2': 'paddle2',
+  'P3': 'paddle3',
+  'P4': 'paddle4',
 };
-const escapeXml = (unsafe: string): string => {
-  return unsafe.replace(/[<>&'"]/g, (c) => {
-    switch (c) {
-      case '<': return '&lt;';
-      case '>': return '&gt;';
-      case '&': return '&amp;';
-      case '\'': return '&apos;';
-      case '"': return '&quot;';
-      default: return c;
-    }
-  });
+// Basic mapping for common keys to hex codes (simplified)
+// In a real app, this would be a comprehensive database
+const KEY_CODE_MAP: Record<string, string> = {
+  'Space': '0x20',
+  'Enter': '0x1000004',
+  'Esc': '0x1000000',
+  'Tab': '0x1000001',
+  'Backspace': '0x1000003',
+  'Shift': '0x1000020',
+  'Ctrl': '0x1000021',
+  'Alt': '0x1000023',
+  'Up': '0x1000013',
+  'Down': '0x1000015',
+  'Left': '0x1000012',
+  'Right': '0x1000014',
 };
-const generateSlotXML = (slot: Slot, profile: Profile, actions: Action[]): string => {
-  let xml = '            <slot>\n';
-  // Determine Mode
-  let mode = 'keyboard';
-  if (slot.type === 'hold') mode = 'hold';
-  else if (slot.type === 'release') mode = 'release';
-  // Handle Set Switch
-  if (slot.modeShiftId) {
-    const targetSetIndex = profile.sets.findIndex(s => s.id === slot.modeShiftId);
-    if (targetSetIndex !== -1) {
-      xml += `                <set_switch>${targetSetIndex + 1}</set_switch>\n`;
-    }
+const getKeyCode = (keyName: string): string => {
+  if (!keyName) return '0x0';
+  // Check explicit map
+  if (KEY_CODE_MAP[keyName]) return KEY_CODE_MAP[keyName];
+  // Single characters
+  if (keyName.length === 1) {
+    const code = keyName.toUpperCase().charCodeAt(0);
+    return '0x' + code.toString(16);
   }
-  // Handle Action / Macro
-  if (slot.macroId) {
-    const macro = profile.macros.find(m => m.id === slot.macroId);
-    if (macro) {
-      macro.steps.forEach(step => {
-        if (step.type === 'delay') {
-          xml += `                <event type="delay" value="${step.value}"/>\n`;
-        } else if (step.type === 'key') {
-          const mapping = getAntiMicroXCode(String(step.value));
-          xml += `                <event type="key" value="${mapping.code}"/>\n`;
-        } else if (step.type === 'mouse') {
-           const mapping = getAntiMicroXCode(String(step.value));
-           xml += `                <event type="mouse" value="${mapping.code}"/>\n`;
-        }
-      });
-    }
-  } else if (slot.actionId) {
-    const action = actions.find(a => a.id === slot.actionId);
-    if (action) {
-      const mapping = getAntiMicroXCode(action.defaultKey);
-      // If slot type didn't override mode (e.g. tap), use action mode
-      if (slot.type === 'tap' || slot.type === 'double') {
-         mode = mapping.mode === 'mouse' ? 'mousebutton' : 'keyboard';
-      }
-      xml += `                <code>${mapping.code}</code>\n`;
-      xml += `                <mode>${mode}</mode>\n`;
-    }
-  } else if (slot.modeShiftId) {
-      // Just a set switch, no code
-      // Strict schema requires <code> and <mode>
-      xml += `                <code>0</code>\n`;
-      xml += `                <mode>${mode}</mode>\n`;
+  // F-keys
+  if (keyName.match(/^F\d+$/)) {
+    const num = parseInt(keyName.substring(1));
+    // F1 is 0x1000030
+    return '0x' + (0x1000030 + num - 1).toString(16);
   }
-  xml += '            </slot>\n';
-  return xml;
+  // Fallback: try to interpret as hex if it looks like it
+  if (keyName.startsWith('0x')) return keyName;
+  return '0x0'; // Unknown
 };
-const generateButtonBlock = (index: number, slotsXML: string, turboInterval: number): string => {
-  return `    <button index="${index}">
-        <toggle>0</toggle>
-        <turbointerval>${turboInterval}</turbointerval>
-        <useturbo>0</useturbo>
-        <mousespeedx>0</mousespeedx>
-        <mousespeedy>0</mousespeedy>
-        <mousemode>none</mousemode>
-        <mouseacceleration>0</mouseacceleration>
-        <mousesmoothing>0</mousesmoothing>
-        <wheelspeedx>0</wheelspeedx>
-        <wheelspeedy>0</wheelspeedy>
-        <slots>
-${slotsXML}        </slots>
-    </button>\n`;
-};
-export const generateAntiMicroXXML = (profile: Profile, actions: Action[]): string => {
-  // Debug Logging for User Transparency
-  console.group('XML Generation Debug');
-  console.log('Timestamp:', new Date().toISOString());
-  console.log('Sets Count:', profile.sets.length);
-  console.log('Actions Count:', actions.length);
-  console.log('Macros Count:', profile.macros.length);
-  console.groupEnd();
-  if (!profile.sets || profile.sets.length === 0) {
-      const errorMsg = "Export failed: Profile has 0 sets. This indicates a state desync or corrupted project.";
-      console.error(errorMsg);
-      throw new Error(errorMsg);
-  }
-  // Get global config
-  const turboInterval = profile.generalConfig?.turboInterval ?? 100;
-  let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
-  xml += '<gamecontroller configversion="19" appversion="2.20.2">\n';
-  xml += `<sdlname>${APP_NAME} Controller</sdlname>\n`;
-  xml += '<guid>00000000000000000000000000000000</guid>\n';
-  xml += '<names/>\n';
-  xml += '<sets>\n';
-  profile.sets.forEach((set, index) => {
-    xml += `<set index="${index + 1}">\n`;
-    xml += `    <name>${escapeXml(set.name)}</name>\n`;
-    xml += `    <instructions><![CDATA[]]></instructions>\n`;
-    // Group mappings by type
-    const buttonMappings: Record<number, string> = {}; // index -> xml
-    const stickMappings: Record<number, { deadZone: number, maxZone: number, diagonalRange: number, buttons: Record<number, string> }> = {};
-    const triggerMappings: Record<number, { deadZone: number, maxZone: number, buttons: Record<number, string> }> = {};
-    const dpadMappings: Record<number, { buttons: Record<number, string> }> = {};
-    // Initialize Sticks (1 and 2) with config
-    [1, 2].forEach(i => {
-        const axisX = i === 1 ? 'leftx' : 'rightx';
-        const config = profile.axisConfig[axisX] || {};
-        stickMappings[i] = {
-            deadZone: config.deadZone || 0,
-            maxZone: config.maxZone || 0,
-            diagonalRange: config.diagonalRange || 0,
-            buttons: {}
+export const generateAntiMicroXXML = (profile: Profile, actions: {id: string, defaultKey: string}[]): string => {
+  const options = { compact: false, ignoreComment: true, spaces: 4 };
+  const sets = profile.sets.map((set, index) => {
+    const buttons = Object.values(set.mappings)
+      .filter(mapping => mapping.slots.length > 0) // Only include buttons with assignments
+      .map(mapping => {
+        const antiMicroId = BUTTON_ID_MAP[mapping.id];
+        if (!antiMicroId) return null;
+        // AntiMicroX structure for a button
+        const slotsElement: any = {
+          slot: []
         };
-    });
-    // Initialize Triggers (5 and 6) with config
-    [5, 6].forEach(i => {
-        const axis = i === 5 ? 'lefttrigger' : 'righttrigger';
-        const config = profile.axisConfig[axis] || {};
-        triggerMappings[i] = {
-            deadZone: config.deadZone || 0,
-            maxZone: config.maxZone || 0,
-            buttons: {}
-        };
-    });
-    // Initialize Dpad (1)
-    dpadMappings[1] = { buttons: {} };
-    // Process Mappings
-    Object.values(set.mappings).forEach(mapping => {
-        const target = MAPPING[mapping.id];
-        if (!target) return;
-        // Generate Slots XML
-        let slotsXML = '';
-        mapping.slots.forEach(slot => {
-            if (slot && (slot.actionId || slot.macroId || slot.modeShiftId)) {
-                slotsXML += generateSlotXML(slot, profile, actions);
+        // Process slots (Tap, Hold, etc.)
+        // Note: AntiMicroX logic for "Hold" vs "Tap" is complex (using sets or advanced assignments).
+        // For this exporter, we will map:
+        // Slot 0 (Tap) -> Standard slot
+        // Slot 1 (Hold) -> Not directly supported in basic XML without 'mode shift' or 'distance', 
+        // but we'll map it as a secondary slot if possible or just stick to basic mapping for Phase 1/2.
+        // To keep it valid, we'll primarily export the TAP action (index 0).
+        // If there's a macro, we export macro events.
+        // We will iterate through slots. 
+        // If it's a mode shift, we use <setselect>
+        mapping.slots.forEach((slot) => {
+          if (!slot) return;
+          const slotObj: any = {};
+          if (slot.modeShiftId) {
+             // Find index of the set
+             const targetSetIndex = profile.sets.findIndex(s => s.id === slot.modeShiftId);
+             if (targetSetIndex !== -1) {
+                 slotObj.setselect = { _text: (targetSetIndex + 1).toString() };
+             }
+          } else if (slot.macroId) {
+            const macro = profile.macros.find(m => m.id === slot.macroId);
+            if (macro) {
+                // Expand macro steps
+                // <event type="key" value="0x..."/>
+                // <event type="delay" value="100"/>
+                const events = macro.steps.map(step => {
+                    if (step.type === 'delay') {
+                        return { _attributes: { type: 'delay', value: step.value } };
+                    } else if (step.type === 'key') {
+                        return { _attributes: { type: 'key', value: getKeyCode(String(step.value)) } };
+                    }
+                    return null;
+                }).filter(Boolean);
+                // If macro has events, add them. 
+                // Note: AntiMicroX puts events directly in <slot> for macros usually, 
+                // or uses <action> tag. We'll put events in slot.
+                if (events.length > 0) {
+                    // If we have multiple events, we can't just push to slotObj directly if we want a list of events
+                    // We need to restructure slotObj to contain the events
+                    // But xml-js expects arrays for multiple children of same name
+                    // Actually, <slot> contains sequence of <event> tags
+                    slotObj.event = events;
+                }
             }
+          } else if (slot.actionId) {
+            const action = actions.find(a => a.id === slot.actionId);
+            if (action) {
+                slotObj.code = { _text: getKeyCode(action.defaultKey) };
+                slotObj.mode = { _text: 'keyboard' };
+            }
+          }
+          // Only add if not empty
+          if (Object.keys(slotObj).length > 0) {
+              slotsElement.slot.push(slotObj);
+          }
         });
-        if (!slotsXML) return; // Skip empty mappings
-        if (target.type === 'button') {
-            buttonMappings[target.index] = generateButtonBlock(target.index, slotsXML, turboInterval);
-        } else if (target.type === 'stick') {
-            if (target.subIndex) stickMappings[target.index].buttons[target.subIndex] = slotsXML;
-        } else if (target.type === 'trigger') {
-            if (target.subIndex) triggerMappings[target.index].buttons[target.subIndex] = slotsXML;
-        } else if (target.type === 'dpad') {
-            if (target.subIndex) dpadMappings[target.index].buttons[target.subIndex] = slotsXML;
-        }
-    });
-    // Output Buttons
-    Object.values(buttonMappings).forEach(b => xml += b);
-    // Output Sticks
-    Object.entries(stickMappings).forEach(([index, data]) => {
-        const hasButtons = Object.keys(data.buttons).length > 0;
-        if (data.deadZone > 0 || data.maxZone > 0 || hasButtons) {
-            xml += `    <stick index="${index}">\n`;
-            if (data.deadZone > 0) xml += `        <deadZone>${data.deadZone}</deadZone>\n`;
-            if (data.maxZone > 0) xml += `        <maxZone>${data.maxZone}</maxZone>\n`;
-            if (data.diagonalRange > 0) xml += `        <diagonalRange>${data.diagonalRange}</diagonalRange>\n`;
-            Object.entries(data.buttons).forEach(([subIndex, slots]) => {
-                xml += `        <stickbutton index="${subIndex}">\n`;
-                xml += `            <slots>\n${slots}            </slots>\n`;
-                xml += `        </stickbutton>\n`;
-            });
-            xml += `    </stick>\n`;
-        }
-    });
-    // Output Triggers
-    Object.entries(triggerMappings).forEach(([index, data]) => {
-        const hasButtons = Object.keys(data.buttons).length > 0;
-        if (data.deadZone > 0 || data.maxZone > 0 || hasButtons) {
-            xml += `    <trigger index="${index}">\n`;
-            if (data.deadZone > 0) xml += `        <deadZone>${data.deadZone}</deadZone>\n`;
-            if (data.maxZone > 0) xml += `        <maxZone>${data.maxZone}</maxZone>\n`;
-            Object.entries(data.buttons).forEach(([subIndex, slots]) => {
-                xml += `        <triggerbutton index="${subIndex}">\n`;
-                xml += `            <slots>\n${slots}            </slots>\n`;
-                xml += `        </triggerbutton>\n`;
-            });
-            xml += `    </trigger>\n`;
-        }
-    });
-    // Output DPads
-    Object.entries(dpadMappings).forEach(([index, data]) => {
-        if (Object.keys(data.buttons).length > 0) {
-            xml += `    <dpad index="${index}">\n`;
-            Object.entries(data.buttons).forEach(([subIndex, slots]) => {
-                xml += `        <dpadbutton index="${subIndex}">\n`;
-                xml += `            <slots>\n${slots}            </slots>\n`;
-                xml += `        </dpadbutton>\n`;
-            });
-            xml += `    </dpad>\n`;
-        }
-    });
-    xml += `</set>\n`;
+        if (slotsElement.slot.length === 0) return null;
+        return {
+          _attributes: { id: antiMicroId },
+          slots: slotsElement
+        };
+      })
+      .filter(Boolean);
+    return {
+      _attributes: { index: (index + 1).toString() },
+      name: { _text: set.name },
+      button: buttons
+    };
   });
-  xml += '</sets>\n';
-  xml += '</gamecontroller>';
-  return xml;
+  const xmlObj = {
+    _declaration: { _attributes: { version: '1.0', encoding: 'UTF-8' } },
+    gamecontroller: {
+      _attributes: { configversion: '19', appversion: '3.3.3' },
+      sdl2gamecontroller: {
+        set: sets
+      }
+    }
+  };
+  return js2xml(xmlObj, options);
 };
