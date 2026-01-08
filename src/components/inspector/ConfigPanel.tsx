@@ -6,12 +6,13 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MousePointerClick, Zap, Layers, FileText, HelpCircle, Info, ArrowRight } from 'lucide-react';
+import { MousePointerClick, Zap, Layers, FileText, HelpCircle, Info } from 'lucide-react';
 import { DraggableAction } from '@/components/dnd/DraggableAction';
 import { DraggableMacro } from '@/components/dnd/DraggableMacro';
 import { DroppableSlot } from '@/components/dnd/DroppableSlot';
 import { MacroEditor } from '@/components/inspector/MacroEditor';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
 export function ConfigPanel() {
   const selectedButtonId = useProfileStore(s => s.selectedButtonId);
   const activeSetId = useProfileStore(s => s.activeSetId);
@@ -21,9 +22,11 @@ export function ConfigPanel() {
   const assignModeShift = useProfileStore(s => s.assignModeShift);
   const addMacro = useProfileStore(s => s.addMacro);
   const [isMacroEditorOpen, setMacroEditorOpen] = useState(false);
+
   const selectedButton = CONTROLLER_BUTTONS.find(b => b.id === selectedButtonId);
   const activeSet = profile.sets.find(s => s.id === activeSetId);
   const mapping = activeSet?.mappings[selectedButtonId || ''];
+
   if (!selectedButtonId || !selectedButton) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-zinc-500 bg-zinc-950 border-l border-zinc-800 p-8 text-center">
@@ -56,9 +59,11 @@ export function ConfigPanel() {
       </div>
     );
   }
+
   const getSlotContent = (index: number) => {
-    const slot = mapping?.slots[index];
+    const slot = mapping?.slots?.[index];
     if (!slot) return <span className="text-zinc-500 text-sm italic">Empty - Drag Action Here</span>;
+
     if (slot.modeShiftId) {
         const targetSet = profile.sets.find(s => s.id === slot.modeShiftId);
         return (
@@ -68,6 +73,7 @@ export function ConfigPanel() {
             </div>
         );
     }
+
     if (slot.macroId) {
         const macro = profile.macros.find(m => m.id === slot.macroId);
         return (
@@ -77,6 +83,7 @@ export function ConfigPanel() {
             </div>
         );
     }
+
     if (slot.actionId) {
         const action = actions.find(a => a.id === slot.actionId);
         return (
@@ -88,13 +95,16 @@ export function ConfigPanel() {
             </div>
         );
     }
+
     return <span className="text-zinc-500 text-sm">Empty - Drag Item Here</span>;
   };
+
   const handleClearSlot = (index: number) => {
       if (activeSetId && selectedButtonId) {
           updateAssignment(activeSetId, selectedButtonId, index, null);
       }
   };
+
   return (
     <TooltipProvider>
         <div className="h-full flex flex-col bg-zinc-950 border-l border-zinc-800">
@@ -108,6 +118,7 @@ export function ConfigPanel() {
             </div>
             <h2 className="text-3xl font-bold text-white tracking-tight">{selectedButton.label}</h2>
         </div>
+
         {/* Main Content */}
         <div className="flex-1 flex flex-col min-h-0">
             <Tabs defaultValue="tap" className="flex-1 flex flex-col">
@@ -136,7 +147,7 @@ export function ConfigPanel() {
                                             </TooltipContent>
                                         </Tooltip>
                                     </div>
-                                    {mapping?.slots[0] && (
+                                    {mapping?.slots?.[0] && (
                                         <Button variant="ghost" size="sm" className="h-6 text-xs text-zinc-500 hover:text-red-400" onClick={() => handleClearSlot(0)}>
                                             Clear
                                         </Button>
@@ -159,12 +170,12 @@ export function ConfigPanel() {
                                     </Tooltip>
                                 </div>
                                 <Select
-                                    value={mapping?.slots[0]?.modeShiftId || "none"}
+                                    value={mapping?.slots?.[0]?.modeShiftId || "none"}
                                     onValueChange={(val) => {
                                         if (val === "none") {
-                                            if (mapping?.slots[0]?.modeShiftId) handleClearSlot(0);
+                                            if (mapping?.slots?.[0]?.modeShiftId) handleClearSlot(0);
                                         } else {
-                                            assignModeShift(activeSetId, selectedButtonId, 0, val);
+                                            if (activeSetId) assignModeShift(activeSetId, selectedButtonId, 0, val);
                                         }
                                     }}
                                 >
@@ -180,6 +191,7 @@ export function ConfigPanel() {
                                 </Select>
                             </div>
                         </TabsContent>
+
                         {/* HOLD TAB */}
                         <TabsContent value="hold" className="mt-0 space-y-4">
                             <div className="space-y-2">
@@ -195,7 +207,7 @@ export function ConfigPanel() {
                                             </TooltipContent>
                                         </Tooltip>
                                     </div>
-                                    {mapping?.slots[1] && (
+                                    {mapping?.slots?.[1] && (
                                         <Button variant="ghost" size="sm" className="h-6 text-xs text-zinc-500 hover:text-red-400" onClick={() => handleClearSlot(1)}>
                                             Clear
                                         </Button>
@@ -218,12 +230,12 @@ export function ConfigPanel() {
                                     </Tooltip>
                                 </div>
                                 <Select
-                                    value={mapping?.slots[1]?.modeShiftId || "none"}
+                                    value={mapping?.slots?.[1]?.modeShiftId || "none"}
                                     onValueChange={(val) => {
                                         if (val === "none") {
-                                            if (mapping?.slots[1]?.modeShiftId) handleClearSlot(1);
+                                            if (mapping?.slots?.[1]?.modeShiftId) handleClearSlot(1);
                                         } else {
-                                            assignModeShift(activeSetId, selectedButtonId, 1, val);
+                                            if (activeSetId) assignModeShift(activeSetId, selectedButtonId, 1, val);
                                         }
                                     }}
                                 >
@@ -239,12 +251,13 @@ export function ConfigPanel() {
                                 </Select>
                             </div>
                         </TabsContent>
+
                         {/* DOUBLE TAB */}
                         <TabsContent value="double" className="mt-0 space-y-4">
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-sm font-medium text-zinc-300">Double Tap Action</h3>
-                                    {mapping?.slots[2] && (
+                                    {mapping?.slots?.[2] && (
                                         <Button variant="ghost" size="sm" className="h-6 text-xs text-zinc-500 hover:text-red-400" onClick={() => handleClearSlot(2)}>
                                             Clear
                                         </Button>
@@ -255,12 +268,13 @@ export function ConfigPanel() {
                                 </DroppableSlot>
                             </div>
                         </TabsContent>
+
                         {/* RELEASE TAB */}
                         <TabsContent value="release" className="mt-0 space-y-4">
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-sm font-medium text-zinc-300">Release Action</h3>
-                                    {mapping?.slots[3] && (
+                                    {mapping?.slots?.[3] && (
                                         <Button variant="ghost" size="sm" className="h-6 text-xs text-zinc-500 hover:text-red-400" onClick={() => handleClearSlot(3)}>
                                             Clear
                                         </Button>
@@ -275,6 +289,7 @@ export function ConfigPanel() {
                     </div>
                 </ScrollArea>
             </Tabs>
+
             {/* Library Section */}
             <div className="h-[350px] border-t border-zinc-800 flex flex-col bg-zinc-950">
                 <Tabs defaultValue="actions" className="flex-1 flex flex-col">
@@ -342,6 +357,8 @@ export function ConfigPanel() {
                 addMacro(name, steps);
             }}
         />
+        </div>
     </TooltipProvider>
   );
 }
+//
