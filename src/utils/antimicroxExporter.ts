@@ -1,5 +1,4 @@
-import { Profile, Set, ButtonMapping, Slot, Macro } from '@/types/antimicro';
-import { js2xml } from 'xml-js';
+import { Profile } from '@/types/antimicro';
 // Mapping from internal ControllerButtonId to AntiMicroX button IDs
 const BUTTON_ID_MAP: Record<string, string> = {
   'A': 'a',
@@ -24,8 +23,7 @@ const BUTTON_ID_MAP: Record<string, string> = {
   'P3': 'paddle3',
   'P4': 'paddle4',
 };
-// Basic mapping for common keys to hex codes (simplified)
-// In a real app, this would be a comprehensive database
+// Basic mapping for common keys to hex codes
 const KEY_CODE_MAP: Record<string, string> = {
   'Space': '0x20',
   'Enter': '0x1000004',
@@ -39,19 +37,22 @@ const KEY_CODE_MAP: Record<string, string> = {
   'Down': '0x1000015',
   'Left': '0x1000012',
   'Right': '0x1000014',
+  'Mouse1': '0x1', // Mouse buttons usually handled differently, but for basic mapping
+  'Mouse2': '0x3',
 };
 const getKeyCode = (keyName: string): string => {
   if (!keyName) return '0x0';
   // Check explicit map
   if (KEY_CODE_MAP[keyName]) return KEY_CODE_MAP[keyName];
-  // Single characters
+  // Single characters (A-Z, 0-9)
   if (keyName.length === 1) {
     const code = keyName.toUpperCase().charCodeAt(0);
-    return '0x' + code.toString(16);
+    return '0x' + code.toString(16).toLowerCase();
   }
   // F-keys
-  if (keyName.match(/^F\d+$/)) {
-    const num = parseInt(keyName.substring(1));
+  const fKeyMatch = keyName.match(/^F(\d+)$/i);
+  if (fKeyMatch) {
+    const num = parseInt(fKeyMatch[1]);
     // F1 is 0x1000030
     return '0x' + (0x1000030 + num - 1).toString(16);
   }
@@ -59,95 +60,75 @@ const getKeyCode = (keyName: string): string => {
   if (keyName.startsWith('0x')) return keyName;
   return '0x0'; // Unknown
 };
-export const generateAntiMicroXXML = (profile: Profile, actions: {id: string, defaultKey: string}[]): string => {
-  const options = { compact: false, ignoreComment: true, spaces: 4 };
-  const sets = profile.sets.map((set, index) => {
-    const buttons = Object.values(set.mappings)
-      .filter(mapping => mapping.slots.length > 0) // Only include buttons with assignments
-      .map(mapping => {
-        const antiMicroId = BUTTON_ID_MAP[mapping.id];
-        if (!antiMicroId) return null;
-        // AntiMicroX structure for a button
-        const slotsElement: any = {
-          slot: []
-        };
-        // Process slots (Tap, Hold, etc.)
-        // Note: AntiMicroX logic for "Hold" vs "Tap" is complex (using sets or advanced assignments).
-        // For this exporter, we will map:
-        // Slot 0 (Tap) -> Standard slot
-        // Slot 1 (Hold) -> Not directly supported in basic XML without 'mode shift' or 'distance', 
-        // but we'll map it as a secondary slot if possible or just stick to basic mapping for Phase 1/2.
-        // To keep it valid, we'll primarily export the TAP action (index 0).
-        // If there's a macro, we export macro events.
-        // We will iterate through slots. 
-        // If it's a mode shift, we use <setselect>
-        mapping.slots.forEach((slot) => {
-          if (!slot) return;
-          const slotObj: any = {};
-          if (slot.modeShiftId) {
-             // Find index of the set
-             const targetSetIndex = profile.sets.findIndex(s => s.id === slot.modeShiftId);
-             if (targetSetIndex !== -1) {
-                 slotObj.setselect = { _text: (targetSetIndex + 1).toString() };
-             }
-          } else if (slot.macroId) {
-            const macro = profile.macros.find(m => m.id === slot.macroId);
-            if (macro) {
-                // Expand macro steps
-                // <event type="key" value="0x..."/>
-                // <event type="delay" value="100"/>
-                const events = macro.steps.map(step => {
-                    if (step.type === 'delay') {
-                        return { _attributes: { type: 'delay', value: step.value } };
-                    } else if (step.type === 'key') {
-                        return { _attributes: { type: 'key', value: getKeyCode(String(step.value)) } };
-                    }
-                    return null;
-                }).filter(Boolean);
-                // If macro has events, add them. 
-                // Note: AntiMicroX puts events directly in <slot> for macros usually, 
-                // or uses <action> tag. We'll put events in slot.
-                if (events.length > 0) {
-                    // If we have multiple events, we can't just push to slotObj directly if we want a list of events
-                    // We need to restructure slotObj to contain the events
-                    // But xml-js expects arrays for multiple children of same name
-                    // Actually, <slot> contains sequence of <event> tags
-                    slotObj.event = events;
-                }
-            }
-          } else if (slot.actionId) {
-            const action = actions.find(a => a.id === slot.actionId);
-            if (action) {
-                slotObj.code = { _text: getKeyCode(action.defaultKey) };
-                slotObj.mode = { _text: 'keyboard' };
-            }
-          }
-          // Only add if not empty
-          if (Object.keys(slotObj).length > 0) {
-              slotsElement.slot.push(slotObj);
-          }
-        });
-        if (slotsElement.slot.length === 0) return null;
-        return {
-          _attributes: { id: antiMicroId },
-          slots: slotsElement
-        };
-      })
-      .filter(Boolean);
-    return {
-      _attributes: { index: (index + 1).toString() },
-      name: { _text: set.name },
-      button: buttons
-    };
-  });
-  const xmlObj = {
-    _declaration: { _attributes: { version: '1.0', encoding: 'UTF-8' } },
-    gamecontroller: {
-      _attributes: { configversion: '19', appversion: '3.3.3' },
-      sdl2gamecontroller: {
-        set: sets
-      }
+const escapeXml = (unsafe: string): string => {
+  return unsafe.replace(/[<>&'"]/g, (c) => {
+    switch (c) {
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      case '&': return '&amp;';
+      case '\'': return '&apos;';
+      case '"': return '&quot;';
+      default: return c;
     }
-  };
-  return js2xml(xmlObj, options);
+  });
+};
+export const generateAntiMicroXXML = (profile: Profile, actions: {id: string, defaultKey: string}[]): string => {
+  let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+  xml += '<gamecontroller configversion="19" appversion="3.3.3">\n';
+  xml += '    <sdl2gamecontroller>\n';
+  profile.sets.forEach((set, index) => {
+    xml += `        <set index="${index + 1}">\n`;
+    xml += `            <name>${escapeXml(set.name)}</name>\n`;
+    // Filter buttons that have at least one slot assigned
+    const activeMappings = Object.values(set.mappings).filter(m => 
+      m.slots.some(s => s.actionId || s.macroId || s.modeShiftId)
+    );
+    activeMappings.forEach(mapping => {
+      const antiMicroId = BUTTON_ID_MAP[mapping.id];
+      if (!antiMicroId) return;
+      xml += `            <button id="${antiMicroId}">\n`;
+      xml += `                <slots>\n`;
+      mapping.slots.forEach((slot) => {
+        if (!slot) return;
+        // Check if slot has content
+        const hasContent = slot.actionId || slot.macroId || slot.modeShiftId;
+        if (!hasContent) return;
+        xml += `                    <slot>\n`;
+        if (slot.modeShiftId) {
+          const targetSetIndex = profile.sets.findIndex(s => s.id === slot.modeShiftId);
+          if (targetSetIndex !== -1) {
+            xml += `                        <setselect>${targetSetIndex + 1}</setselect>\n`;
+          }
+        } else if (slot.macroId) {
+          const macro = profile.macros.find(m => m.id === slot.macroId);
+          if (macro) {
+            macro.steps.forEach(step => {
+              if (step.type === 'delay') {
+                xml += `                        <event type="delay" value="${step.value}"/>\n`;
+              } else if (step.type === 'key') {
+                xml += `                        <event type="key" value="${getKeyCode(String(step.value))}"/>\n`;
+              } else if (step.type === 'mouse') {
+                 // Basic mouse support
+                 // AntiMicroX uses specific codes for mouse, simplified here
+                 xml += `                        <event type="mouse" value="${step.value}"/>\n`;
+              }
+            });
+          }
+        } else if (slot.actionId) {
+          const action = actions.find(a => a.id === slot.actionId);
+          if (action) {
+            xml += `                        <code>${getKeyCode(action.defaultKey)}</code>\n`;
+            xml += `                        <mode>keyboard</mode>\n`;
+          }
+        }
+        xml += `                    </slot>\n`;
+      });
+      xml += `                </slots>\n`;
+      xml += `            </button>\n`;
+    });
+    xml += `        </set>\n`;
+  });
+  xml += '    </sdl2gamecontroller>\n';
+  xml += '</gamecontroller>';
+  return xml;
 };
