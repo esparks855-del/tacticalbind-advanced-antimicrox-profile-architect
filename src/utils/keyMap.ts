@@ -15,10 +15,6 @@ export const KEY_MAP: Record<string, string> = {
   'f1': '0x1000030', 'f2': '0x1000031', 'f3': '0x1000032', 'f4': '0x1000033',
   'f5': '0x1000034', 'f6': '0x1000035', 'f7': '0x1000036', 'f8': '0x1000037',
   'f9': '0x1000038', 'f10': '0x1000039', 'f11': '0x100003a', 'f12': '0x100003b',
-  // Extended Function Keys
-  'f13': '0x100003c', 'f14': '0x100003d', 'f15': '0x100003e', 'f16': '0x100003f',
-  'f17': '0x1000040', 'f18': '0x1000041', 'f19': '0x1000042', 'f20': '0x1000043',
-  'f21': '0x1000044', 'f22': '0x1000045', 'f23': '0x1000046', 'f24': '0x1000047',
   // Modifiers
   'shift': '0x1000020', 'lshift': '0x1000020', 'rshift': '0x1000020',
   'ctrl': '0x1000021', 'lctrl': '0x1000021', 'rctrl': '0x1000021',
@@ -46,23 +42,6 @@ export const KEY_MAP: Record<string, string> = {
   'down': '0x1000015',
   'left': '0x1000012',
   'right': '0x1000014',
-  // Numpad
-  'numpad0': '0x1000005', // User requested specific mapping (likely Numpad Enter or specific game bind)
-  'numpadenter': '0x1000005',
-  'numpad1': '0x31', // Fallback to standard numbers if specific Qt codes aren't strictly required by user
-  'numpad2': '0x32',
-  'numpad3': '0x33',
-  'numpad4': '0x34',
-  'numpad5': '0x35',
-  'numpad6': '0x36',
-  'numpad7': '0x37',
-  'numpad8': '0x38',
-  'numpad9': '0x39',
-  'numpadadd': '0x100002b',
-  'numpadsubtract': '0x100002d',
-  'numpadmultiply': '0x100002a',
-  'numpaddivide': '0x100002f',
-  'numpaddecimal': '0x100002e',
   // Symbols
   '`': '0x60', '~': '0x7e',
   '-': '0x2d', '_': '0x5f',

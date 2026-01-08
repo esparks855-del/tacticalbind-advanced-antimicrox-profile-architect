@@ -13,6 +13,7 @@ interface ProfileState {
   // Actions
   setImporterOpen: (isOpen: boolean) => void;
   loadActions: (actions: Action[]) => void;
+  loadProject: (data: { profile: Profile, actions: Action[] }) => void;
   // Set Management
   addSet: (name: string) => void;
   removeSet: (id: string) => void;
@@ -52,6 +53,12 @@ export const useProfileStore = create<ProfileState>((set) => ({
   loadActions: (newActions) => set((state) => ({
     actions: [...state.actions, ...newActions]
   })),
+  loadProject: (data) => set(() => ({
+    profile: data.profile,
+    actions: data.actions,
+    activeSetId: data.profile.sets[0]?.id || INITIAL_SET_ID,
+    selectedButtonId: null
+  })),
   addSet: (name) => set((state) => {
     const newId = `set-${uuidv4()}`;
     return {
@@ -90,11 +97,11 @@ export const useProfileStore = create<ProfileState>((set) => ({
         newSlots[slotIndex] = { ...newSlots[slotIndex], actionId: undefined, macroId: undefined, modeShiftId: undefined };
     } else {
         // Set Action
-        newSlots[slotIndex] = { 
-            ...newSlots[slotIndex], 
-            actionId, 
-            macroId: undefined, 
-            modeShiftId: undefined 
+        newSlots[slotIndex] = {
+            ...newSlots[slotIndex],
+            actionId,
+            macroId: undefined,
+            modeShiftId: undefined
         };
     }
     const newSet = {
@@ -115,11 +122,11 @@ export const useProfileStore = create<ProfileState>((set) => ({
     const currentMapping = currentSet.mappings[buttonId] || { id: buttonId, slots: [] };
     const newSlots = [...currentMapping.slots];
     while (newSlots.length <= slotIndex) newSlots.push({ type: 'tap' });
-    newSlots[slotIndex] = { 
-        ...newSlots[slotIndex], 
-        macroId, 
-        actionId: undefined, 
-        modeShiftId: undefined 
+    newSlots[slotIndex] = {
+        ...newSlots[slotIndex],
+        macroId,
+        actionId: undefined,
+        modeShiftId: undefined
     };
     const newSet = {
       ...currentSet,
@@ -136,11 +143,11 @@ export const useProfileStore = create<ProfileState>((set) => ({
     const currentMapping = currentSet.mappings[buttonId] || { id: buttonId, slots: [] };
     const newSlots = [...currentMapping.slots];
     while (newSlots.length <= slotIndex) newSlots.push({ type: 'tap' });
-    newSlots[slotIndex] = { 
-        ...newSlots[slotIndex], 
-        modeShiftId: targetSetId, 
-        actionId: undefined, 
-        macroId: undefined 
+    newSlots[slotIndex] = {
+        ...newSlots[slotIndex],
+        modeShiftId: targetSetId,
+        actionId: undefined,
+        macroId: undefined
     };
     const newSet = {
       ...currentSet,

@@ -18,7 +18,7 @@ import { useProfileStore } from '@/store/profileStore';
 import { DraggableAction } from '@/components/dnd/DraggableAction';
 import { DraggableMacro } from '@/components/dnd/DraggableMacro';
 import { Action, Macro } from '@/types/antimicro';
-type DragItem = 
+type DragItem =
   | { type: 'action'; data: Action }
   | { type: 'macro'; data: Macro };
 export function EditorLayout() {
@@ -68,13 +68,13 @@ export function EditorLayout() {
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex h-screen w-full bg-zinc-950 text-zinc-100 overflow-hidden font-sans">
         {/* Left Sidebar: Set Manager */}
-        <aside className="w-64 flex-shrink-0 z-20 shadow-xl">
+        <aside className="w-64 flex-shrink-0 z-20 shadow-xl border-r border-zinc-800 h-full">
           <SetManager />
         </aside>
         {/* Main Content: Controller Visualizer */}
-        <main className="flex-1 relative flex flex-col min-w-0 bg-zinc-950/50">
+        <main className="flex-1 relative flex flex-col min-w-0 bg-zinc-950/50 h-full">
           {/* Header */}
-          <header className="h-14 border-b border-zinc-800 flex items-center justify-between px-6 bg-zinc-950">
+          <header className="h-14 flex-shrink-0 border-b border-zinc-800 flex items-center justify-between px-6 bg-zinc-950">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-amber-500 animate-pulse" />
               <h1 className="text-sm font-bold tracking-widest uppercase text-zinc-300">
@@ -86,13 +86,13 @@ export function EditorLayout() {
               <ThemeToggle className="static transform-none" />
             </div>
           </header>
-          {/* Workspace */}
-          <div className="flex-1 flex items-center justify-center p-6 overflow-hidden bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-zinc-900 via-zinc-950 to-zinc-950">
+          {/* Workspace - Overflow Auto allows scrolling only if controller is too big */}
+          <div className="flex-1 flex items-center justify-center p-6 overflow-auto bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-zinc-900 via-zinc-950 to-zinc-950">
             <ControllerSchematic />
           </div>
         </main>
         {/* Right Sidebar: Inspector */}
-        <aside className="w-80 flex-shrink-0 z-20 shadow-xl">
+        <aside className="w-80 flex-shrink-0 z-20 shadow-xl border-l border-zinc-800 h-full">
           <ConfigPanel />
         </aside>
         {/* Modals & Overlays */}
