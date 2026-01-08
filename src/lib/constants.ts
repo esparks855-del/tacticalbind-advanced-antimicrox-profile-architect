@@ -21,15 +21,6 @@ export const CONTROLLER_BUTTONS = [
   { id: 'P2', label: 'P2', type: 'paddle' },
   { id: 'P3', label: 'P3', type: 'paddle' },
   { id: 'P4', label: 'P4', type: 'paddle' },
-  // Stick Directions (New)
-  { id: 'LS_Up', label: 'LS Up', type: 'stick_dir' },
-  { id: 'LS_Down', label: 'LS Down', type: 'stick_dir' },
-  { id: 'LS_Left', label: 'LS Left', type: 'stick_dir' },
-  { id: 'LS_Right', label: 'LS Right', type: 'stick_dir' },
-  { id: 'RS_Up', label: 'RS Up', type: 'stick_dir' },
-  { id: 'RS_Down', label: 'RS Down', type: 'stick_dir' },
-  { id: 'RS_Left', label: 'RS Left', type: 'stick_dir' },
-  { id: 'RS_Right', label: 'RS Right', type: 'stick_dir' },
 ] as const;
 export type ControllerButtonId = typeof CONTROLLER_BUTTONS[number]['id'];
 export const SLOT_TYPES = [
