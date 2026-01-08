@@ -81,7 +81,8 @@ function runSetupCommands() {
     "bun add file-saver@^2.0.5",
     "bun add @types/file-saver@^2.0.7",
     "bun add xml-js@^1.6.11",
-    "bun add @dnd-kit/utilities"
+    "bun add @dnd-kit/utilities",
+    "bun add @dnd-kit/core @dnd-kit/utilities"
 ];
     
     if (commands.length === 0) {
