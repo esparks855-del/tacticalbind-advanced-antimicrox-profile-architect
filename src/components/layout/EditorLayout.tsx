@@ -1,11 +1,12 @@
 import React from 'react';
-import { 
-  DndContext, 
-  DragOverlay, 
-  useSensor, 
-  useSensors, 
-  PointerSensor, 
-  DragEndEvent 
+import {
+  DndContext,
+  DragOverlay,
+  useSensor,
+  useSensors,
+  PointerSensor,
+  DragEndEvent,
+  DragStartEvent
 } from '@dnd-kit/core';
 import { SetManager } from '@/components/sidebar/SetManager';
 import { ConfigPanel } from '@/components/inspector/ConfigPanel';
@@ -15,11 +16,16 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { Toaster } from '@/components/ui/sonner';
 import { useProfileStore } from '@/store/profileStore';
 import { DraggableAction } from '@/components/dnd/DraggableAction';
-import { Action } from '@/types/antimicro';
+import { DraggableMacro } from '@/components/dnd/DraggableMacro';
+import { Action, Macro } from '@/types/antimicro';
+type DragItem = 
+  | { type: 'action'; data: Action }
+  | { type: 'macro'; data: Macro };
 export function EditorLayout() {
   const updateAssignment = useProfileStore(s => s.updateAssignment);
+  const assignMacro = useProfileStore(s => s.assignMacro);
   const activeSetId = useProfileStore(s => s.activeSetId);
-  const [activeDragAction, setActiveDragAction] = React.useState<Action | null>(null);
+  const [activeDragItem, setActiveDragItem] = React.useState<DragItem | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -27,29 +33,34 @@ export function EditorLayout() {
       },
     })
   );
-  const handleDragStart = (event: any) => {
-    if (event.active.data.current?.type === 'action') {
-      setActiveDragAction(event.active.data.current.action);
+  const handleDragStart = (event: DragStartEvent) => {
+    const { current } = event.active.data;
+    if (current?.type === 'action') {
+      setActiveDragItem({ type: 'action', data: current.action });
+    } else if (current?.type === 'macro') {
+      setActiveDragItem({ type: 'macro', data: current.macro });
     }
   };
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    setActiveDragAction(null);
+    setActiveDragItem(null);
     if (!over) return;
     // Check if dropped on a slot
     // Slot ID format: slot-{buttonId}-{slotIndex}
     if (String(over.id).startsWith('slot-')) {
       const parts = String(over.id).split('-');
       // parts[0] = 'slot'
-      // parts[1] = buttonId (might contain dashes? No, our IDs are simple strings like 'A', 'DPad-Up' -> wait, DPadUp)
-      // Let's assume button IDs don't contain dashes for safety, or we join.
-      // Our IDs: A, B, X, Y, LB, RB, LT, RT, Back, Start, Guide, LS, RS, DPadUp...
-      // None have dashes. Safe.
+      // parts[1] = buttonId
+      // parts[2] = slotIndex
       const buttonId = parts[1];
       const slotIndex = parseInt(parts[2], 10);
-      const actionId = active.id as string;
       if (activeSetId && buttonId && !isNaN(slotIndex)) {
-        updateAssignment(activeSetId, buttonId, slotIndex, actionId);
+        const type = active.data.current?.type;
+        if (type === 'action') {
+            updateAssignment(activeSetId, buttonId, slotIndex, active.id as string);
+        } else if (type === 'macro') {
+            assignMacro(activeSetId, buttonId, slotIndex, active.id as string);
+        }
       }
     }
   };
@@ -88,9 +99,13 @@ export function EditorLayout() {
         <ActionImporter />
         <Toaster theme="dark" position="bottom-right" />
         <DragOverlay>
-          {activeDragAction ? (
-            <div className="opacity-90 rotate-3 scale-105 cursor-grabbing">
-               <DraggableAction action={activeDragAction} />
+          {activeDragItem ? (
+            <div className="opacity-90 rotate-3 scale-105 cursor-grabbing w-[250px]">
+               {activeDragItem.type === 'action' ? (
+                   <DraggableAction action={activeDragItem.data} />
+               ) : (
+                   <DraggableMacro macro={activeDragItem.data} />
+               )}
             </div>
           ) : null}
         </DragOverlay>
