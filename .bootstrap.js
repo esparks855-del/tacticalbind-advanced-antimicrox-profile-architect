@@ -80,7 +80,8 @@ function runSetupCommands() {
     const commands = [
     "bun add file-saver@^2.0.5",
     "bun add @types/file-saver@^2.0.7",
-    "bun add xml-js@^1.6.11"
+    "bun add xml-js@^1.6.11",
+    "bun add @dnd-kit/utilities"
 ];
     
     if (commands.length === 0) {
