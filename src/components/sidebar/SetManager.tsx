@@ -6,11 +6,13 @@ import { Plus, Layers, Trash2, Download, FileText, Save, Upload, Settings2, File
 import { cn } from '@/lib/utils';
 import { generateAntiMicroXXML } from '@/utils/antimicroxExporter';
 import { saveAs } from 'file-saver';
+import { saveFileAs } from '@/utils/fileSystem';
 import { toast } from 'sonner';
 import { ControllerSettingsModal } from '@/components/modals/ControllerSettingsModal';
 import { XmlPreviewModal } from '@/components/modals/XmlPreviewModal';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { APP_NAME, APP_VERSION, APP_ID } from '@/utils/projectIdentity';
+import { Profile } from '@/types/antimicro';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,17 +38,40 @@ export function SetManager() {
   const [isSettingsOpen, setSettingsOpen] = useState(false);
   const [isPreviewOpen, setPreviewOpen] = useState(false);
   const [isResetAlertOpen, setResetAlertOpen] = useState(false);
+  // Helper to check if profile has any actual mappings
+  const isProfileEmpty = (p: Profile): boolean => {
+    // Check if any set has any button with any slot assigned
+    return !p.sets.some(set =>
+      Object.values(set.mappings).some(mapping =>
+        mapping.slots.some(slot =>
+          slot.actionId || slot.macroId || slot.modeShiftId
+        )
+      )
+    );
+  };
   // IMPERATIVE EXPORT HANDLER
   // Uses getState() to guarantee fresh data, bypassing any potential React render staleness
-  const handleExportXML = () => {
+  const handleExportXML = async () => {
     try {
-      toast.info("Exporting from latest memory snapshot...");
       // Fetch fresh state directly from store
       const { profile: freshProfile, actions: freshActions } = useProfileStore.getState().getSnapshot();
+      // 1. Validation: Check for empty profile
+      if (isProfileEmpty(freshProfile)) {
+        toast.error("Cannot export empty profile", {
+          description: "Please map at least one button before exporting."
+        });
+        return;
+      }
+      toast.info("Preparing export...");
       const xml = generateAntiMicroXXML(freshProfile, freshActions);
       const blob = new Blob([xml], { type: 'application/xml;charset=utf-8' });
-      saveAs(blob, 'profile.amgp');
-      toast.success('Profile exported successfully!');
+      // 2. Smart Save
+      const saved = await saveFileAs(blob, 'profile.amgp');
+      if (saved) {
+        toast.success('Profile exported successfully!');
+      } else {
+        toast.info('Export cancelled');
+      }
     } catch (error) {
       console.error("Export Error:", error);
       toast.error('Failed to generate profile XML', {
