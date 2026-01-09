@@ -38,7 +38,7 @@ if (!gotTheLock) {
       mainWindow.webContents.openDevTools();
     } else {
       const indexPath = path.join(__dirname, 'dist', 'index.html');
-      console.log(`📦 Loading from file: ${indexPath}`);
+      console.log(`���� Loading from file: ${indexPath}`);
       mainWindow.loadFile(indexPath).catch(e => {
         console.error('Failed to load index.html:', e);
       });
