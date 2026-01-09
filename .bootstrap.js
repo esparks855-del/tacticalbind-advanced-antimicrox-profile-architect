@@ -86,7 +86,8 @@ function runSetupCommands() {
     "bun add @radix-ui/react-tooltip",
     "bun add -D electron electron-builder concurrently wait-on",
     "bun add react-hotkeys-hook",
-    "bun add electron-builder --dev"
+    "bun add electron-builder --dev",
+    "bun add date-fns"
 ];
     
     if (commands.length === 0) {
