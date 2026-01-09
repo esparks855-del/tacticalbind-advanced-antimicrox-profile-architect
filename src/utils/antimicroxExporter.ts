@@ -4,6 +4,7 @@
  */
 import { Profile, Slot, Action, Macro } from '@/types/antimicro';
 import { getAntiMicroXCode } from '@/utils/keyMap';
+import { APP_NAME } from '@/utils/projectIdentity';
 // Internal ID to AntiMicroX Element Mapping
 interface AntiMicroElement {
   type: 'button' | 'stick' | 'trigger' | 'dpad';
@@ -126,7 +127,7 @@ export const generateAntiMicroXXML = (profile: Profile, actions: Action[]): stri
   }
   let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
   xml += '<gamecontroller configversion="19" appversion="2.20.2">\n';
-  xml += '<sdlname>TacticalBind Controller</sdlname>\n';
+  xml += `<sdlname>${APP_NAME} Controller</sdlname>\n`;
   xml += '<guid>00000000000000000000000000000000</guid>\n';
   xml += '<names/>\n';
   xml += '<sets>\n';

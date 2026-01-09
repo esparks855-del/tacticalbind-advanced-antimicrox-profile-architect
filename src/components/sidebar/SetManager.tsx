@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { useProfileStore } from '@/store/profileStore';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Layers, Trash2, Download, FileText, Save, Upload, Settings2, FileCode, RotateCcw, AlertTriangle } from 'lucide-react';
+import { Plus, Layers, Trash2, Download, FileText, Save, Upload, Settings2, FileCode, RotateCcw, AlertTriangle, Bug } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { generateAntiMicroXXML } from '@/utils/antimicroxExporter';
 import { saveAs } from 'file-saver';
@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { ControllerSettingsModal } from '@/components/modals/ControllerSettingsModal';
 import { XmlPreviewModal } from '@/components/modals/XmlPreviewModal';
 import { useHotkeys } from 'react-hotkeys-hook';
+import { APP_NAME, APP_VERSION, APP_ID } from '@/utils/projectIdentity';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -69,6 +70,29 @@ export function SetManager() {
     } catch (error) {
       console.error(error);
       toast.error('Failed to save project');
+    }
+  };
+  const handleFullStateExport = () => {
+    try {
+      const snapshot = useProfileStore.getState().getSnapshot();
+      const debugData = {
+        identity: {
+          name: APP_NAME,
+          version: APP_VERSION,
+          id: APP_ID,
+          timestamp: new Date().toISOString(),
+          userAgent: navigator.userAgent
+        },
+        store: snapshot,
+        localStorage: localStorage.getItem('tactical-bind-storage')
+      };
+      const json = JSON.stringify(debugData, null, 2);
+      const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+      saveAs(blob, 'tactical-bind-debug-dump.json');
+      toast.success('Full state dump exported!');
+    } catch (error) {
+      console.error("Debug Export Error:", error);
+      toast.error('Failed to export debug state');
     }
   };
   // Keyboard Shortcuts
@@ -235,6 +259,16 @@ export function SetManager() {
                     Export .amgp
                 </Button>
             </div>
+            <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-zinc-600 hover:text-zinc-400 text-[10px] h-6 mt-2"
+                onClick={handleFullStateExport}
+                title="Dump full project state for debugging"
+            >
+                <Bug className="w-3 h-3 mr-1" />
+                Debug Export (Full State)
+            </Button>
         </div>
       </div>
       <ControllerSettingsModal
