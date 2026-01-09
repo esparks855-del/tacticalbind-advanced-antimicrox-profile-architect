@@ -9,6 +9,7 @@ import { saveAs } from 'file-saver';
 import { toast } from 'sonner';
 import { ControllerSettingsModal } from '@/components/modals/ControllerSettingsModal';
 import { XmlPreviewModal } from '@/components/modals/XmlPreviewModal';
+import { useHotkeys } from 'react-hotkeys-hook';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,6 +61,15 @@ export function SetManager() {
       toast.error('Failed to save project');
     }
   };
+  // Keyboard Shortcuts
+  useHotkeys('ctrl+s, meta+s', (e) => {
+    e.preventDefault();
+    handleSaveProject();
+  }, { enableOnFormTags: true }, [profile, actions]);
+  useHotkeys('ctrl+e, meta+e', (e) => {
+    e.preventDefault();
+    handleExportXML();
+  }, { enableOnFormTags: true }, [profile, actions]);
   const handleLoadProject = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -155,6 +165,7 @@ export function SetManager() {
                     size="sm"
                     className="border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900"
                     onClick={handleSaveProject}
+                    title="Save Project (Ctrl+S)"
                 >
                     <Save className="w-3 h-3 mr-2" />
                     Save
@@ -208,6 +219,7 @@ export function SetManager() {
                 <Button
                     className="w-full bg-amber-600 hover:bg-amber-700 text-white"
                     onClick={handleExportXML}
+                    title="Export .amgp (Ctrl+E)"
                 >
                     <Download className="w-4 h-4 mr-2" />
                     Export .amgp

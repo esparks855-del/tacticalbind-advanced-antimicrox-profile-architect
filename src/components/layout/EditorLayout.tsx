@@ -20,7 +20,7 @@ import { DraggableMacro } from '@/components/dnd/DraggableMacro';
 import { Action, Macro } from '@/types/antimicro';
 import { HelpModal } from '@/components/modals/HelpModal';
 import { Button } from '@/components/ui/button';
-import { LifeBuoy } from 'lucide-react';
+import { LifeBuoy, Cloud } from 'lucide-react';
 type DragItem =
   | { type: 'action'; data: Action }
   | { type: 'macro'; data: Macro };
@@ -84,11 +84,15 @@ export function EditorLayout() {
               <h1 className="text-sm font-bold tracking-widest uppercase text-zinc-300">
                 Tactical<span className="text-amber-500">Bind</span> Architect
               </h1>
+              <div className="flex items-center gap-2 text-xs text-zinc-500 border-l border-zinc-800 pl-4 ml-2">
+                <Cloud className="w-3 h-3" />
+                <span className="hidden sm:inline">Auto-save On</span>
+              </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 className="text-zinc-400 hover:text-amber-500 gap-2"
                 onClick={() => setHelpOpen(true)}
               >
