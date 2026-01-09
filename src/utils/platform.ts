@@ -10,12 +10,11 @@ export function isElectron(): boolean {
     return true;
   }
   // Check for process.type (Node integration check)
-  // Typed via src/types/global.d.ts
+  // @ts-ignore
   if (window.process && window.process.type) {
     return true;
   }
-  // Check for process.versions.electron
-  // Typed via src/types/global.d.ts
+  // @ts-ignore
   if (window.process && window.process.versions && window.process.versions.electron) {
     return true;
   }

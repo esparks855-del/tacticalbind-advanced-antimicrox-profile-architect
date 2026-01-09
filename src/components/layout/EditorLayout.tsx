@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -21,8 +21,9 @@ import { Action, Macro } from '@/types/antimicro';
 import { HelpModal } from '@/components/modals/HelpModal';
 import { DebugStateModal } from '@/components/modals/DebugStateModal';
 import { Button } from '@/components/ui/button';
-import { LifeBuoy, Cloud, Bug } from 'lucide-react';
+import { LifeBuoy, Cloud, Bug, Monitor, Globe } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { isElectron } from '@/utils/platform';
 type DragItem =
   | { type: 'action'; data: Action }
   | { type: 'macro'; data: Macro };
@@ -33,6 +34,10 @@ export function EditorLayout() {
   const [activeDragItem, setActiveDragItem] = React.useState<DragItem | null>(null);
   const [isHelpOpen, setHelpOpen] = useState(false);
   const [isDebugOpen, setDebugOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
+  useEffect(() => {
+    setIsDesktop(isElectron());
+  }, []);
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -94,6 +99,18 @@ export function EditorLayout() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                {/* Environment Indicator */}
+                {isDesktop ? (
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold text-blue-400 uppercase tracking-wider mr-2">
+                    <Monitor className="w-3 h-3" />
+                    <span>Desktop</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-zinc-800 border border-zinc-700 text-[10px] font-bold text-zinc-500 uppercase tracking-wider mr-2">
+                    <Globe className="w-3 h-3" />
+                    <span>Web</span>
+                  </div>
+                )}
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
