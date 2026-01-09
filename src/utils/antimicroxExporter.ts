@@ -1,3 +1,7 @@
+/**
+ * AntiMicroX Schema Version 2.20.2 Compliant Exporter
+ * Generates valid .amgp XML files for controller mapping.
+ */
 import { Profile, Slot, Action, Macro } from '@/types/antimicro';
 import { getAntiMicroXCode } from '@/utils/keyMap';
 // Internal ID to AntiMicroX Element Mapping
