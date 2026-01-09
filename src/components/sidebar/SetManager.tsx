@@ -2,11 +2,11 @@ import React, { useRef, useState } from 'react';
 import { useProfileStore } from '@/store/profileStore';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Layers, Trash2, Download, FileText, Save, Upload, Settings2, FileCode, RotateCcw, AlertTriangle, Bug } from 'lucide-react';
+import { Plus, Layers, Trash2, Download, FileText, Save, Upload, Settings2, FileCode, RotateCcw, AlertTriangle, Bug, ArrowDownToLine } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { generateAntiMicroXXML } from '@/utils/antimicroxExporter';
 import { saveAs } from 'file-saver';
-import { saveFileAs } from '@/utils/fileSystem';
+import { saveFileAs, downloadFile } from '@/utils/fileSystem';
 import { toast } from 'sonner';
 import { ControllerSettingsModal } from '@/components/modals/ControllerSettingsModal';
 import { XmlPreviewModal } from '@/components/modals/XmlPreviewModal';
@@ -23,6 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 export function SetManager() {
   // UI State Hooks (Reactive)
   const profile = useProfileStore(s => s.profile);
@@ -49,7 +50,7 @@ export function SetManager() {
       )
     );
   };
-  // IMPERATIVE EXPORT HANDLER
+  // IMPERATIVE EXPORT HANDLER (Smart Save)
   // Uses getState() to guarantee fresh data, bypassing any potential React render staleness
   const handleExportXML = async () => {
     try {
@@ -77,6 +78,29 @@ export function SetManager() {
       toast.error('Failed to generate profile XML', {
         description: error instanceof Error ? error.message : 'Unknown error'
       });
+    }
+  };
+  // DIRECT DOWNLOAD HANDLER (Force Browser Download)
+  const handleDirectDownload = async () => {
+    try {
+      const { profile: freshProfile, actions: freshActions } = useProfileStore.getState().getSnapshot();
+      if (isProfileEmpty(freshProfile)) {
+        toast.error("Cannot export empty profile", {
+          description: "Please map at least one button before exporting."
+        });
+        return;
+      }
+      const xml = generateAntiMicroXXML(freshProfile, freshActions);
+      const blob = new Blob([xml], { type: 'application/xml;charset=utf-8' });
+      const started = await downloadFile(blob, 'profile.amgp');
+      if (started) {
+        toast.success('Download started', {
+          description: 'Check your browser downloads folder.'
+        });
+      }
+    } catch (error) {
+      console.error("Download Error:", error);
+      toast.error('Failed to start download');
     }
   };
   const handleSaveProject = () => {
@@ -158,169 +182,188 @@ export function SetManager() {
     setResetAlertOpen(false);
   };
   return (
-    <div className="flex flex-col h-full bg-zinc-950 border-r border-zinc-800">
-      <div className="p-4 border-b border-zinc-800 space-y-4">
-        <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
-            <Layers className="w-4 h-4" />
-            Mission Sets
-            </h2>
-            <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 text-zinc-500 hover:text-amber-500"
-                onClick={() => setSettingsOpen(true)}
-                title="Controller Settings"
-            >
-                <Settings2 className="w-4 h-4" />
-            </Button>
-        </div>
-        <Button
-          onClick={() => addSet(`Set ${profile.sets.length + 1}`)}
-          className="w-full bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800"
-          size="sm"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          New Set
-        </Button>
-      </div>
-      <ScrollArea className="flex-1 px-2 py-4">
-        <div className="space-y-1">
-          {profile.sets.map((set) => (
-            <div
-              key={set.id}
-              className={cn(
-                "group flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium transition-all cursor-pointer",
-                activeSetId === set.id
-                  ? "bg-amber-500/10 text-amber-500 border border-amber-500/20"
-                  : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200 border border-transparent"
-              )}
-              onClick={() => selectSet(set.id)}
-            >
-              <span>{set.name}</span>
-              {profile.sets.length > 1 && (
-                <Button
+    <TooltipProvider>
+      <div className="flex flex-col h-full bg-zinc-950 border-r border-zinc-800">
+        <div className="p-4 border-b border-zinc-800 space-y-4">
+          <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
+              <Layers className="w-4 h-4" />
+              Mission Sets
+              </h2>
+              <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 opacity-0 group-hover:opacity-100 hover:bg-red-900/20 hover:text-red-500 transition-all"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeSet(set.id);
-                  }}
-                >
-                  <Trash2 className="w-3 h-3" />
-                </Button>
-              )}
-            </div>
-          ))}
+                  className="h-6 w-6 text-zinc-500 hover:text-amber-500"
+                  onClick={() => setSettingsOpen(true)}
+                  title="Controller Settings"
+              >
+                  <Settings2 className="w-4 h-4" />
+              </Button>
+          </div>
+          <Button
+            onClick={() => addSet(`Set ${profile.sets.length + 1}`)}
+            className="w-full bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800"
+            size="sm"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            New Set
+          </Button>
         </div>
-      </ScrollArea>
-      <div className="p-4 border-t border-zinc-800 bg-zinc-950 space-y-3">
-        <div className="space-y-2">
-            <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider">Project Files</h3>
-            <div className="grid grid-cols-2 gap-2">
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900"
-                    onClick={handleSaveProject}
-                    title="Save Project (Ctrl+S)"
-                >
-                    <Save className="w-3 h-3 mr-2" />
-                    Save
-                </Button>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900"
-                    onClick={() => fileInputRef.current?.click()}
-                >
-                    <Upload className="w-3 h-3 mr-2" />
-                    Load
-                </Button>
-                <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    accept=".json"
-                    onChange={handleLoadProject}
-                />
-            </div>
-            <Button
-                variant="ghost"
-                size="sm"
-                className="w-full text-red-900 hover:text-red-500 hover:bg-red-950/30 text-xs h-7"
-                onClick={() => setResetAlertOpen(true)}
-            >
-                <RotateCcw className="w-3 h-3 mr-2" />
-                Reset Project
-            </Button>
+        <ScrollArea className="flex-1 px-2 py-4">
+          <div className="space-y-1">
+            {profile.sets.map((set) => (
+              <div
+                key={set.id}
+                className={cn(
+                  "group flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium transition-all cursor-pointer",
+                  activeSetId === set.id
+                    ? "bg-amber-500/10 text-amber-500 border border-amber-500/20"
+                    : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200 border border-transparent"
+                )}
+                onClick={() => selectSet(set.id)}
+              >
+                <span>{set.name}</span>
+                {profile.sets.length > 1 && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 opacity-0 group-hover:opacity-100 hover:bg-red-900/20 hover:text-red-500 transition-all"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeSet(set.id);
+                    }}
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        </ScrollArea>
+        <div className="p-4 border-t border-zinc-800 bg-zinc-950 space-y-3">
+          <div className="space-y-2">
+              <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider">Project Files</h3>
+              <div className="grid grid-cols-2 gap-2">
+                  <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900"
+                      onClick={handleSaveProject}
+                      title="Save Project (Ctrl+S)"
+                  >
+                      <Save className="w-3 h-3 mr-2" />
+                      Save
+                  </Button>
+                  <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900"
+                      onClick={() => fileInputRef.current?.click()}
+                  >
+                      <Upload className="w-3 h-3 mr-2" />
+                      Load
+                  </Button>
+                  <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      accept=".json"
+                      onChange={handleLoadProject}
+                  />
+              </div>
+              <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-red-900 hover:text-red-500 hover:bg-red-950/30 text-xs h-7"
+                  onClick={() => setResetAlertOpen(true)}
+              >
+                  <RotateCcw className="w-3 h-3 mr-2" />
+                  Reset Project
+              </Button>
+          </div>
+          <div className="space-y-2 pt-2 border-t border-zinc-900">
+              <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider">Actions</h3>
+              <Button
+                variant="outline"
+                className="w-full border-zinc-700 text-zinc-400 hover:text-amber-500 hover:border-amber-500 hover:bg-zinc-900"
+                onClick={() => setImporterOpen(true)}
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Import Keybinds
+              </Button>
+              <div className="grid grid-cols-1 gap-2">
+                  <Button
+                      variant="secondary"
+                      className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700"
+                      onClick={() => setPreviewOpen(true)}
+                  >
+                      <FileCode className="w-4 h-4 mr-2" />
+                      View XML Code
+                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                        className="flex-1 bg-amber-600 hover:bg-amber-700 text-white"
+                        onClick={handleExportXML}
+                        title="Export .amgp (Ctrl+E)"
+                    >
+                        <Download className="w-4 h-4 mr-2" />
+                        Export
+                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="bg-zinc-900 border-zinc-700 text-zinc-400 hover:text-amber-500 hover:border-amber-500"
+                          onClick={handleDirectDownload}
+                        >
+                          <ArrowDownToLine className="w-4 h-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Quick Download (Force Browser Download)</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+              </div>
+              <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-zinc-600 hover:text-zinc-400 text-[10px] h-6 mt-2"
+                  onClick={handleFullStateExport}
+                  title="Dump full project state for debugging"
+              >
+                  <Bug className="w-3 h-3 mr-1" />
+                  Debug Export (Full State)
+              </Button>
+          </div>
         </div>
-        <div className="space-y-2 pt-2 border-t border-zinc-900">
-            <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider">Actions</h3>
-            <Button
-              variant="outline"
-              className="w-full border-zinc-700 text-zinc-400 hover:text-amber-500 hover:border-amber-500 hover:bg-zinc-900"
-              onClick={() => setImporterOpen(true)}
-            >
-              <FileText className="w-4 h-4 mr-2" />
-              Import Keybinds
-            </Button>
-            <div className="grid grid-cols-1 gap-2">
-                <Button
-                    variant="secondary"
-                    className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700"
-                    onClick={() => setPreviewOpen(true)}
-                >
-                    <FileCode className="w-4 h-4 mr-2" />
-                    View XML Code
-                </Button>
-                <Button
-                    className="w-full bg-amber-600 hover:bg-amber-700 text-white"
-                    onClick={handleExportXML}
-                    title="Export .amgp (Ctrl+E)"
-                >
-                    <Download className="w-4 h-4 mr-2" />
-                    Export .amgp
-                </Button>
-            </div>
-            <Button
-                variant="ghost"
-                size="sm"
-                className="w-full text-zinc-600 hover:text-zinc-400 text-[10px] h-6 mt-2"
-                onClick={handleFullStateExport}
-                title="Dump full project state for debugging"
-            >
-                <Bug className="w-3 h-3 mr-1" />
-                Debug Export (Full State)
-            </Button>
-        </div>
+        <ControllerSettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setSettingsOpen(false)}
+        />
+        <XmlPreviewModal
+          isOpen={isPreviewOpen}
+          onClose={() => setPreviewOpen(false)}
+        />
+        <AlertDialog open={isResetAlertOpen} onOpenChange={setResetAlertOpen}>
+          <AlertDialogContent className="bg-zinc-950 border-zinc-800 text-zinc-100">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2 text-red-500">
+                  <AlertTriangle className="w-5 h-5" />
+                  Reset Project?
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-zinc-400">
+                This will wipe all sets, macros, and imported actions. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100">Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleResetConfirm} className="bg-red-900 text-red-100 hover:bg-red-800">Yes, Reset Everything</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
-      <ControllerSettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setSettingsOpen(false)}
-      />
-      <XmlPreviewModal
-        isOpen={isPreviewOpen}
-        onClose={() => setPreviewOpen(false)}
-      />
-      <AlertDialog open={isResetAlertOpen} onOpenChange={setResetAlertOpen}>
-        <AlertDialogContent className="bg-zinc-950 border-zinc-800 text-zinc-100">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-red-500">
-                <AlertTriangle className="w-5 h-5" />
-                Reset Project?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-400">
-              This will wipe all sets, macros, and imported actions. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100">Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleResetConfirm} className="bg-red-900 text-red-100 hover:bg-red-800">Yes, Reset Everything</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+    </TooltipProvider>
   );
 }

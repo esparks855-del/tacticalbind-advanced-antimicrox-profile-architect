@@ -46,3 +46,21 @@ export async function saveFileAs(blob: Blob, suggestedName: string): Promise<boo
     throw error;
   }
 }
+/**
+ * Forces a direct browser download using file-saver, bypassing any "Save As" dialogs
+ * or File System Access APIs. This ensures the file appears in the browser's
+ * downloads folder/bar immediately.
+ *
+ * @param blob The data to download
+ * @param name The file name
+ * @returns Promise<boolean> true if download started
+ */
+export async function downloadFile(blob: Blob, name: string): Promise<boolean> {
+  try {
+    saveAs(blob, name);
+    return true;
+  } catch (error) {
+    console.error('Direct download failed', error);
+    return false;
+  }
+}
