@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useProfileStore } from '@/store/profileStore';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Layers, Trash2, Download, FileText, Save, Upload, Settings2, FileCode, RotateCcw, AlertTriangle, Bug, ArrowDownToLine, HelpCircle, Database } from 'lucide-react';
+import { Plus, Layers, Trash2, Download, FileText, Save, Upload, Settings2, FileCode, RotateCcw, AlertTriangle, Bug, ArrowDownToLine, HelpCircle, Database, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { generateAntiMicroXXML } from '@/utils/antimicroxExporter';
 import { saveAs } from 'file-saver';
@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { ControllerSettingsModal } from '@/components/modals/ControllerSettingsModal';
 import { XmlPreviewModal } from '@/components/modals/XmlPreviewModal';
 import { BackupSettingsModal } from '@/components/modals/BackupSettingsModal';
+import { RecoveryManualModal } from '@/components/modals/RecoveryManualModal';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { APP_NAME, APP_VERSION, APP_ID } from '@/utils/projectIdentity';
 import { Profile } from '@/types/antimicro';
@@ -41,6 +42,7 @@ export function SetManager() {
   const [isPreviewOpen, setPreviewOpen] = useState(false);
   const [isResetAlertOpen, setResetAlertOpen] = useState(false);
   const [isBackupModalOpen, setBackupModalOpen] = useState(false);
+  const [isRecoveryModalOpen, setRecoveryModalOpen] = useState(false);
   // Helper to check if profile has any actual mappings
   const isProfileEmpty = (p: Profile): boolean => {
     // Check if any set has any button with any slot assigned
@@ -200,9 +202,9 @@ export function SetManager() {
               <Layers className="w-4 h-4" />
               Mission Sets
               </h2>
-              <Button 
-                  variant="ghost" 
-                  size="icon" 
+              <Button
+                  variant="ghost"
+                  size="icon"
                   className="h-6 w-6 text-zinc-500 hover:text-amber-500"
                   onClick={() => setSettingsOpen(true)}
                   title="Controller Settings"
@@ -210,7 +212,7 @@ export function SetManager() {
                   <Settings2 className="w-4 h-4" />
               </Button>
           </div>
-          <Button 
+          <Button
             onClick={() => addSet(`Set ${profile.sets.length + 1}`)}
             className="w-full bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800"
             size="sm"
@@ -254,9 +256,9 @@ export function SetManager() {
           <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider">Project Files</h3>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
+                <Button
+                  variant="ghost"
+                  size="icon"
                   className="h-5 w-5 text-zinc-600 hover:text-amber-500"
                   onClick={() => setBackupModalOpen(true)}
                   title="Auto-Backup Settings"
@@ -265,9 +267,9 @@ export function SetManager() {
                 </Button>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                  <Button 
-                      variant="outline" 
-                      size="sm" 
+                  <Button
+                      variant="outline"
+                      size="sm"
                       className="border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900"
                       onClick={handleSaveProject}
                       title="Save Project (Ctrl+S)"
@@ -275,9 +277,9 @@ export function SetManager() {
                       <Save className="w-3 h-3 mr-2" />
                       Save
                   </Button>
-                  <Button 
-                      variant="outline" 
-                      size="sm" 
+                  <Button
+                      variant="outline"
+                      size="sm"
                       className="border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900"
                       onClick={handleLoadProject}
                   >
@@ -285,9 +287,18 @@ export function SetManager() {
                       Load
                   </Button>
               </div>
-              <Button 
-                  variant="ghost" 
-                  size="sm" 
+              <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-amber-600 hover:text-amber-500 hover:bg-amber-950/30 text-xs h-7"
+                  onClick={() => setRecoveryModalOpen(true)}
+              >
+                  <Wrench className="w-3 h-3 mr-2" />
+                  Recovery Manual
+              </Button>
+              <Button
+                  variant="ghost"
+                  size="sm"
                   className="w-full text-red-900 hover:text-red-500 hover:bg-red-950/30 text-xs h-7"
                   onClick={() => setResetAlertOpen(true)}
               >
@@ -297,8 +308,8 @@ export function SetManager() {
           </div>
           <div className="space-y-2 pt-2 border-t border-zinc-900">
               <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider">Actions</h3>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="w-full border-zinc-700 text-zinc-400 hover:text-amber-500 hover:border-amber-500 hover:bg-zinc-900"
                 onClick={() => setImporterOpen(true)}
               >
@@ -307,8 +318,8 @@ export function SetManager() {
               </Button>
               <div className="grid grid-cols-1 gap-2">
                   <div className="flex items-center gap-2">
-                    <Button 
-                        variant="secondary" 
+                    <Button
+                        variant="secondary"
                         className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700"
                         onClick={() => setPreviewOpen(true)}
                     >
@@ -327,7 +338,7 @@ export function SetManager() {
                     </Tooltip>
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Button 
+                    <Button
                         className="w-full bg-amber-600 hover:bg-amber-700 text-white"
                         onClick={handleExportXML}
                         title="Save As... (Ctrl+E)"
@@ -335,8 +346,8 @@ export function SetManager() {
                         <Download className="w-4 h-4 mr-2" />
                         Save As...
                     </Button>
-                    <Button 
-                        variant="outline" 
+                    <Button
+                        variant="outline"
                         className="w-full bg-zinc-900 border-zinc-700 text-zinc-400 hover:text-amber-500 hover:border-amber-500"
                         onClick={handleDirectDownload}
                         title="Force Download"
@@ -346,9 +357,9 @@ export function SetManager() {
                     </Button>
                   </div>
               </div>
-              <Button 
-                  variant="ghost" 
-                  size="sm" 
+              <Button
+                  variant="ghost"
+                  size="sm"
                   className="w-full text-zinc-600 hover:text-zinc-400 text-[10px] h-6 mt-2"
                   onClick={handleFullStateExport}
                   title="Dump full project state for debugging"
@@ -358,17 +369,21 @@ export function SetManager() {
               </Button>
           </div>
         </div>
-        <ControllerSettingsModal 
-          isOpen={isSettingsOpen} 
-          onClose={() => setSettingsOpen(false)} 
+        <ControllerSettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setSettingsOpen(false)}
         />
-        <XmlPreviewModal 
-          isOpen={isPreviewOpen} 
-          onClose={() => setPreviewOpen(false)} 
+        <XmlPreviewModal
+          isOpen={isPreviewOpen}
+          onClose={() => setPreviewOpen(false)}
         />
         <BackupSettingsModal
           isOpen={isBackupModalOpen}
           onClose={() => setBackupModalOpen(false)}
+        />
+        <RecoveryManualModal
+          isOpen={isRecoveryModalOpen}
+          onClose={() => setRecoveryModalOpen(false)}
         />
         <AlertDialog open={isResetAlertOpen} onOpenChange={setResetAlertOpen}>
           <AlertDialogContent className="bg-zinc-950 border-zinc-800 text-zinc-100">

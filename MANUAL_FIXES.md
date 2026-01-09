@@ -15,11 +15,11 @@
   "description": "Advanced AntiMicroX Profile Architect",
   "author": "TacticalBind User",
   "scripts": {
-    "dev": "vite --host 0.0.0.0 --port ${PORT:-3000}",
+    "dev": "vite",
     "build": "vite build --base=./",
     "lint": "eslint --cache -f json --quiet .",
     "preview": "vite preview",
-    "electron:dev": "concurrently \"vite --host 0.0.0.0 --port 3000\" \"wait-on tcp:3000 && electron . --dev\"",
+    "electron:dev": "concurrently \"vite\" \"wait-on tcp:5173 && electron .\"",
     "electron:build": "vite build --base=./ && electron-builder",
     "postinstall": "electron-builder install-app-deps"
   },
@@ -186,14 +186,14 @@ if (!gotTheLock) {
     mainWindow.maximize();
     const isDev = process.env.NODE_ENV === 'development' || process.argv.includes('--dev');
     if (isDev) {
-      console.log('🔌 Loading from localhost:3000');
-      mainWindow.loadURL('http://localhost:3000').catch(e => {
+      console.log('🔌 Loading from localhost:5173');
+      mainWindow.loadURL('http://localhost:5173').catch(e => {
         console.error('Failed to load localhost:', e);
       });
       mainWindow.webContents.openDevTools();
     } else {
       const indexPath = path.join(__dirname, 'dist', 'index.html');
-      console.log(`📦 Loading from file: ${indexPath}`);
+      console.log(\`📦 Loading from file: \${indexPath}\`);
       mainWindow.loadFile(indexPath).catch(e => {
         console.error('Failed to load index.html:', e);
       });
@@ -332,6 +332,6 @@ window.addEventListener('DOMContentLoaded', () => {
     if (element) element.innerText = text
   }
   for (const type of ['chrome', 'node', 'electron']) {
-    replaceText(`${type}-version`, process.versions[type])
+    replaceText(\`\${type}-version\`, process.versions[type])
   }
 });
