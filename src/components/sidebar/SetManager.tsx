@@ -92,15 +92,25 @@ export function SetManager() {
       }
       const xml = generateAntiMicroXXML(freshProfile, freshActions);
       const blob = new Blob([xml], { type: 'application/xml;charset=utf-8' });
+      // Calculate size for user confidence
+      const sizeInBytes = blob.size;
+      const sizeDisplay = sizeInBytes > 1024 
+        ? `${(sizeInBytes / 1024).toFixed(1)} KB` 
+        : `${sizeInBytes} bytes`;
+      console.log(`Attempting download. Size: ${sizeDisplay}`);
       const started = await downloadFile(blob, 'profile.amgp');
       if (started) {
-        toast.success('Download started', {
+        toast.success(`Download started (${sizeDisplay})`, {
           description: 'Check your browser downloads folder.'
+        });
+      } else {
+        toast.error('Download failed to start', {
+            description: 'Please try the "Export" button instead.'
         });
       }
     } catch (error) {
       console.error("Download Error:", error);
-      toast.error('Failed to start download');
+      toast.error('Failed to generate download');
     }
   };
   const handleSaveProject = () => {
@@ -190,9 +200,9 @@ export function SetManager() {
               <Layers className="w-4 h-4" />
               Mission Sets
               </h2>
-              <Button
-                  variant="ghost"
-                  size="icon"
+              <Button 
+                  variant="ghost" 
+                  size="icon" 
                   className="h-6 w-6 text-zinc-500 hover:text-amber-500"
                   onClick={() => setSettingsOpen(true)}
                   title="Controller Settings"

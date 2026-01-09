@@ -47,9 +47,9 @@ export async function saveFileAs(blob: Blob, suggestedName: string): Promise<boo
   }
 }
 /**
- * Forces a direct browser download using file-saver, bypassing any "Save As" dialogs
- * or File System Access APIs. This ensures the file appears in the browser's
- * downloads folder/bar immediately.
+ * Forces a direct browser download using a native DOM anchor tag.
+ * This is often more reliable than file-saver in certain environments (Electron, strict sandboxes).
+ * Falls back to file-saver if the DOM method fails.
  *
  * @param blob The data to download
  * @param name The file name
@@ -57,10 +57,31 @@ export async function saveFileAs(blob: Blob, suggestedName: string): Promise<boo
  */
 export async function downloadFile(blob: Blob, name: string): Promise<boolean> {
   try {
-    saveAs(blob, name);
+    // Method 1: Native DOM Anchor Click (Most reliable for forcing downloads)
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = name;
+    // Append to body is required for Firefox
+    document.body.appendChild(a);
+    // Programmatic click
+    a.click();
+    // Cleanup after a short delay to ensure the click registered
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
     return true;
   } catch (error) {
-    console.error('Direct download failed', error);
-    return false;
+    console.warn('Native download failed, attempting fallback', error);
+    // Method 2: FileSaver Fallback
+    try {
+      saveAs(blob, name);
+      return true;
+    } catch (fsError) {
+      console.error('All download methods failed', fsError);
+      return false;
+    }
   }
 }
