@@ -211,7 +211,10 @@ export function SetManager() {
                 <Button
                     variant="secondary"
                     className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700"
-                    onClick={() => setPreviewOpen(true)}
+                    onClick={() => {
+                        console.log('Opening XML Preview');
+                        setPreviewOpen(true);
+                    }}
                 >
                     <FileCode className="w-4 h-4 mr-2" />
                     View XML Code

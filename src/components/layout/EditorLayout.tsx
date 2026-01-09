@@ -100,7 +100,7 @@ export function EditorLayout() {
                 <span className="hidden sm:inline">Briefing</span>
               </Button>
               <div className="h-4 w-px bg-zinc-800 mx-2" />
-              <span className="text-xs text-zinc-500 font-mono mr-2">v1.0.0-BETA</span>
+              <span className="text-xs text-zinc-500 font-mono mr-2">v1.1.0-RC1</span>
               <ThemeToggle className="static transform-none" />
             </div>
           </header>
