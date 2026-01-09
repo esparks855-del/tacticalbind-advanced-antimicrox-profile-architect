@@ -3,7 +3,8 @@ window.addEventListener('DOMContentLoaded', () => {
   console.log('TacticalBind Architect: Preload script loaded.');
   // Expose safe APIs to the renderer
   window.electronAPI = {
-    saveFile: (content, filename) => ipcRenderer.invoke('save-file', content, filename)
+    saveFile: (content, filename) => ipcRenderer.invoke('save-file', content, filename),
+    openFile: (filters) => ipcRenderer.invoke('open-file', filters)
   };
   const replaceText = (selector, text) => {
     const element = document.getElementById(selector)

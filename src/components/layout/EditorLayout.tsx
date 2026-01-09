@@ -25,6 +25,7 @@ import { LifeBuoy, Cloud, Bug, Monitor, Globe } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { isElectron } from '@/utils/platform';
 import { APP_NAME, APP_VERSION } from '@/utils/projectIdentity';
+import { toast } from 'sonner';
 type DragItem =
   | { type: 'action'; data: Action }
   | { type: 'macro'; data: Macro };
@@ -32,6 +33,8 @@ export function EditorLayout() {
   const updateAssignment = useProfileStore(s => s.updateAssignment);
   const assignMacro = useProfileStore(s => s.assignMacro);
   const activeSetId = useProfileStore(s => s.activeSetId);
+  const loadProject = useProfileStore(s => s.loadProject);
+  const setImporterOpen = useProfileStore(s => s.setImporterOpen);
   const [activeDragItem, setActiveDragItem] = React.useState<DragItem | null>(null);
   const [isHelpOpen, setHelpOpen] = useState(false);
   const [isDebugOpen, setDebugOpen] = useState(false);
@@ -77,10 +80,49 @@ export function EditorLayout() {
       }
     }
   };
+  const handleGlobalDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Ignore if dragging internal dnd-kit items
+    if (activeDragItem) return;
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      const text = await file.text();
+      if (file.name.endsWith('.json')) {
+        try {
+          const data = JSON.parse(text);
+          if (data.profile && data.actions) {
+            loadProject(data);
+            toast.success(`Dropped project "${file.name}" loaded!`);
+          } else {
+            toast.error('Invalid project file format');
+          }
+        } catch (err) {
+          toast.error('Failed to parse project JSON');
+        }
+      } else if (file.name.endsWith('.txt') || file.name.endsWith('.ini') || file.name.endsWith('.cfg')) {
+        // For text files, we can't easily inject into the Importer component state from here without a store update.
+        // So we'll just notify the user to use the import button for now, or open the modal.
+        setImporterOpen(true);
+        toast.info('Opened Importer. Please paste content or select file.', {
+            description: 'Direct drag-to-import coming in next update.'
+        });
+      }
+    }
+  };
+  const handleGlobalDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <TooltipProvider>
-        <div className="flex h-screen w-full bg-zinc-950 text-zinc-100 overflow-hidden font-sans">
+        <div
+            className="flex h-screen w-full bg-zinc-950 text-zinc-100 overflow-hidden font-sans"
+            onDrop={handleGlobalDrop}
+            onDragOver={handleGlobalDragOver}
+        >
           {/* Left Sidebar: Set Manager */}
           <aside className="w-64 flex-shrink-0 z-20 shadow-xl border-r border-zinc-800 h-full">
             <SetManager />

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, screen, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, screen, ipcMain, dialog, Menu, shell } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -22,7 +22,7 @@ if (!gotTheLock) {
       show: false,
       webPreferences: {
         nodeIntegration: true,
-        contextIsolation: false, // Kept false for compatibility with current architecture
+        contextIsolation: false,
         webSecurity: false,
         devTools: true,
         preload: path.join(__dirname, 'preload.js')
@@ -49,6 +49,58 @@ if (!gotTheLock) {
     mainWindow.on('closed', () => {
       mainWindow = null;
     });
+    // Create Application Menu
+    const template = [
+      {
+        label: 'File',
+        submenu: [
+          { label: 'Open Project...', accelerator: 'CmdOrCtrl+O', click: () => { /* TODO: Trigger via IPC if needed, or rely on UI */ } },
+          { label: 'Save Project', accelerator: 'CmdOrCtrl+S', click: () => { /* Handled by Renderer Hotkeys */ } },
+          { type: 'separator' },
+          { role: 'quit' }
+        ]
+      },
+      {
+        label: 'Edit',
+        submenu: [
+          { role: 'undo' },
+          { role: 'redo' },
+          { type: 'separator' },
+          { role: 'cut' },
+          { role: 'copy' },
+          { role: 'paste' },
+          { role: 'delete' },
+          { role: 'selectAll' }
+        ]
+      },
+      {
+        label: 'View',
+        submenu: [
+          { role: 'reload' },
+          { role: 'forceReload' },
+          { role: 'toggleDevTools' },
+          { type: 'separator' },
+          { role: 'resetZoom' },
+          { role: 'zoomIn' },
+          { role: 'zoomOut' },
+          { type: 'separator' },
+          { role: 'togglefullscreen' }
+        ]
+      },
+      {
+        label: 'Help',
+        submenu: [
+          {
+            label: 'Learn More',
+            click: async () => {
+              await shell.openExternal('https://github.com/AntiMicroX/antimicrox');
+            }
+          }
+        ]
+      }
+    ];
+    const menu = Menu.buildFromTemplate(template);
+    Menu.setApplicationMenu(menu);
   };
   // IPC Handlers
   ipcMain.handle('save-file', async (event, content, filename) => {
@@ -69,6 +121,22 @@ if (!gotTheLock) {
     } catch (error) {
       console.error('Failed to save file:', error);
       return { success: false, error: error.message };
+    }
+  });
+  ipcMain.handle('open-file', async (event, filters) => {
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile'],
+      filters: filters || [{ name: 'All Files', extensions: ['*'] }]
+    });
+    if (canceled || filePaths.length === 0) {
+      return { canceled: true };
+    }
+    try {
+      const content = await fs.promises.readFile(filePaths[0], 'utf-8');
+      return { canceled: false, content, filename: path.basename(filePaths[0]) };
+    } catch (error) {
+      console.error('Failed to open file:', error);
+      return { canceled: false, error: error.message };
     }
   });
   app.whenReady().then(() => {

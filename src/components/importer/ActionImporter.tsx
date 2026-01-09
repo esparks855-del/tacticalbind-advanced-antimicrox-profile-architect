@@ -3,13 +3,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { useProfileStore } from '@/store/profileStore';
 import { parseKeybinds } from '@/utils/parser';
 import { Upload, FileText, ArrowRight, Check, AlertCircle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Action } from '@/types/antimicro';
+import { openTextFile } from '@/utils/fileSystem';
 export function ActionImporter() {
   const isOpen = useProfileStore(s => s.isImporterOpen);
   const setOpen = useProfileStore(s => s.setImporterOpen);
@@ -18,7 +17,6 @@ export function ActionImporter() {
   const [step, setStep] = useState<'input' | 'preview'>('input');
   const [text, setText] = useState('');
   const [parsedActions, setParsedActions] = useState<Action[]>([]);
-  const [replaceExisting, setReplaceExisting] = useState(false);
   // Reset state when modal opens/closes
   useEffect(() => {
     if (isOpen) {
@@ -44,34 +42,21 @@ export function ActionImporter() {
     }
   };
   const handleConfirmImport = () => {
-    // If replacing, we might need a way to clear existing actions first.
-    // The store currently only has `loadActions` which appends.
-    // However, since this is a "smart" importer, let's just append for now as per store capability,
-    // or if we really want replace, we'd need a store action for `setActions`.
-    // Given the store implementation: `loadActions: (newActions) => set((state) => ({ actions: [...state.actions, ...newActions] }))`
-    // We can't easily replace without modifying store. 
-    // BUT, we added `resetProject` which clears actions. 
-    // For now, let's stick to Append behavior or warn user.
-    // Actually, let's just append. The toggle "Replace" implies clearing.
-    // Since I can't change the store interface for `loadActions` easily without breaking other things potentially (though I just edited store),
-    // I will assume `loadActions` appends. 
-    // Wait, I CAN edit the store in this phase. I already did.
-    // But I didn't add `setActions`. 
-    // Let's just use `loadActions` (Append) for now to be safe, or use `resetProject` logic if I wanted to clear.
-    // Actually, I'll just append. Simpler and safer.
     loadActions(parsedActions);
     toast.success(`Successfully imported ${parsedActions.length} actions`);
     setOpen(false);
   };
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result as string;
-      setText(content);
-    };
-    reader.readAsText(file);
+  const handleFileUpload = async () => {
+    try {
+      const fileData = await openTextFile('.txt,.ini,.cfg', 'Config Files');
+      if (fileData) {
+        setText(fileData.content);
+        toast.success(`Loaded ${fileData.name}`);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to read file');
+    }
   };
   return (
     <Dialog open={isOpen} onOpenChange={setOpen}>
@@ -82,8 +67,8 @@ export function ActionImporter() {
             {step === 'input' ? 'Import Keybinds' : 'Verify Intel'}
           </DialogTitle>
           <DialogDescription className="text-zinc-400">
-            {step === 'input' 
-              ? 'Paste your configuration or upload a file to begin parsing.' 
+            {step === 'input'
+              ? 'Paste your configuration or upload a file to begin parsing.'
               : `Review the ${parsedActions.length} detected actions before importing.`}
           </DialogDescription>
         </DialogHeader>
@@ -93,18 +78,11 @@ export function ActionImporter() {
               <Button
                 variant="outline"
                 className="w-full border-dashed border-zinc-700 hover:border-amber-500 hover:bg-zinc-900 text-zinc-400 hover:text-amber-500 transition-colors"
-                onClick={() => document.getElementById('file-upload')?.click()}
+                onClick={handleFileUpload}
               >
                 <Upload className="w-4 h-4 mr-2" />
                 Upload .txt / .ini File
               </Button>
-              <input
-                id="file-upload"
-                type="file"
-                accept=".txt,.ini,.cfg"
-                className="hidden"
-                onChange={handleFileUpload}
-              />
             </div>
             <div className="relative">
               <Textarea
@@ -143,8 +121,8 @@ export function ActionImporter() {
               <div className="flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-blue-400" />
                 <span className="text-xs text-zinc-400">
-                  {existingActions.length > 0 
-                    ? `Will be added to ${existingActions.length} existing actions.` 
+                  {existingActions.length > 0
+                    ? `Will be added to ${existingActions.length} existing actions.`
                     : 'Ready to populate Action Library.'}
                 </span>
               </div>

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { useProfileStore } from '@/store/profileStore';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -6,7 +6,7 @@ import { Plus, Layers, Trash2, Download, FileText, Save, Upload, Settings2, File
 import { cn } from '@/lib/utils';
 import { generateAntiMicroXXML } from '@/utils/antimicroxExporter';
 import { saveAs } from 'file-saver';
-import { saveFileAs, downloadFile } from '@/utils/fileSystem';
+import { saveFileAs, downloadFile, openTextFile } from '@/utils/fileSystem';
 import { toast } from 'sonner';
 import { ControllerSettingsModal } from '@/components/modals/ControllerSettingsModal';
 import { XmlPreviewModal } from '@/components/modals/XmlPreviewModal';
@@ -35,7 +35,6 @@ export function SetManager() {
   const setImporterOpen = useProfileStore(s => s.setImporterOpen);
   const loadProject = useProfileStore(s => s.loadProject);
   const resetProject = useProfileStore(s => s.resetProject);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
   const [isPreviewOpen, setPreviewOpen] = useState(false);
   const [isResetAlertOpen, setResetAlertOpen] = useState(false);
@@ -171,28 +170,23 @@ export function SetManager() {
     e.preventDefault();
     handleExportXML();
   }, { enableOnFormTags: true });
-  const handleLoadProject = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const content = event.target?.result as string;
-        const data = JSON.parse(content);
-        if (data.profile && data.actions) {
-          loadProject(data);
-          toast.success('Project loaded successfully!');
-        } else {
-          throw new Error('Invalid project file format');
-        }
-      } catch (error) {
-        console.error(error);
-        toast.error('Failed to load project file');
+  const handleLoadProject = async () => {
+    try {
+      const fileData = await openTextFile('.json', 'TacticalBind Project');
+      if (!fileData) return; // Canceled
+      const data = JSON.parse(fileData.content);
+      if (data.profile && data.actions) {
+        loadProject(data);
+        toast.success(`Project "${fileData.name}" loaded successfully!`);
+      } else {
+        throw new Error('Invalid project file format');
       }
-      // Reset input
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    };
-    reader.readAsText(file);
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to load project file', {
+        description: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
   };
   const handleResetConfirm = () => {
     resetProject();
@@ -276,18 +270,11 @@ export function SetManager() {
                       variant="outline"
                       size="sm"
                       className="border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900"
-                      onClick={() => fileInputRef.current?.click()}
+                      onClick={handleLoadProject}
                   >
                       <Upload className="w-3 h-3 mr-2" />
                       Load
                   </Button>
-                  <input
-                      type="file"
-                      ref={fileInputRef}
-                      className="hidden"
-                      accept=".json"
-                      onChange={handleLoadProject}
-                  />
               </div>
               <Button
                   variant="ghost"

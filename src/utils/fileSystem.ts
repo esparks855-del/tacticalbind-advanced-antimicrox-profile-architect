@@ -73,3 +73,56 @@ export async function saveFileAs(blob: Blob, suggestedName: string): Promise<boo
   // 3. Universal Fallback (Firefox, Safari, Mobile)
   return await downloadFile(blob, suggestedName);
 }
+/**
+ * Opens a text file using the best available method (Native Dialog or Hidden Input).
+ * @param accept Comma-separated list of extensions/types (e.g. ".json,.txt")
+ * @param description Description for the file filter (Electron only)
+ */
+export async function openTextFile(accept: string, description: string = 'Text Files'): Promise<{ content: string; name: string } | null> {
+  // 1. Electron Native Path
+  if (window.electronAPI) {
+    try {
+      // Convert accept string ".json,.txt" to extensions array ["json", "txt"]
+      const extensions = accept.split(',').map(ext => ext.trim().replace(/^\./, ''));
+      const result = await window.electronAPI.openFile([{ name: description, extensions }]);
+      if (result.canceled) return null;
+      if (result.error) throw new Error(result.error);
+      if (result.content !== undefined && result.filename) {
+        return { content: result.content, name: result.filename };
+      }
+    } catch (err) {
+      console.error('Electron open failed:', err);
+    }
+  }
+  // 2. Web Fallback (Hidden Input)
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = accept;
+    input.style.display = 'none';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            if (ev.target?.result) {
+                resolve({ content: ev.target.result as string, name: file.name });
+            } else {
+                resolve(null);
+            }
+        };
+        reader.onerror = () => resolve(null);
+        reader.readAsText(file);
+      } else {
+        resolve(null);
+      }
+      // Cleanup
+      input.remove();
+    };
+    // Trigger
+    document.body.appendChild(input);
+    input.click();
+    // Note: There is no reliable way to detect "Cancel" on a file input programmatically across all browsers
+    // without a timeout hack, so we just rely on the user picking a file.
+  });
+}
