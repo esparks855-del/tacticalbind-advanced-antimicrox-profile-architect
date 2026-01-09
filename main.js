@@ -14,8 +14,14 @@ function createWindow() {
       // In a production internet-facing app, this should be false with a preload script.
     },
   });
-  // Load the index.html from the dist directory (production build)
-  win.loadFile(path.join(__dirname, 'dist', 'index.html'));
+  // In development, load from localhost
+  // In production, load from the dist directory
+  if (process.env.NODE_ENV === 'development' || process.argv.includes('--dev')) {
+    win.loadURL('http://localhost:3000');
+    win.webContents.openDevTools();
+  } else {
+    win.loadFile(path.join(__dirname, 'dist', 'index.html'));
+  }
 }
 app.whenReady().then(() => {
   createWindow();
