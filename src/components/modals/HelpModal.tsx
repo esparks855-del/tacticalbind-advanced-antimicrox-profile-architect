@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { LifeBuoy, FileText, Gamepad2, Download, Terminal, Zap, Layers } from 'lucide-react';
+import { LifeBuoy, FileText, Gamepad2, Download, Zap, Layers, ShieldCheck, AlertTriangle } from 'lucide-react';
 interface HelpModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -22,8 +22,9 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
           </DialogDescription>
         </DialogHeader>
         <div className="flex-1 min-h-0 mt-4">
-          <Tabs defaultValue="import" className="h-full flex flex-col">
+          <Tabs defaultValue="safety" className="h-full flex flex-col">
             <TabsList className="bg-zinc-900 border border-zinc-800 w-full justify-start overflow-x-auto">
+              <TabsTrigger value="safety" className="gap-2 text-amber-500 data-[state=active]:text-amber-500"><ShieldCheck className="w-4 h-4"/> Data Safety</TabsTrigger>
               <TabsTrigger value="import" className="gap-2"><FileText className="w-4 h-4"/> Import</TabsTrigger>
               <TabsTrigger value="mapping" className="gap-2"><Gamepad2 className="w-4 h-4"/> Mapping</TabsTrigger>
               <TabsTrigger value="layers" className="gap-2"><Layers className="w-4 h-4"/> Layers & Modes</TabsTrigger>
@@ -31,11 +32,53 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
               <TabsTrigger value="export" className="gap-2"><Download className="w-4 h-4"/> Export</TabsTrigger>
             </TabsList>
             <ScrollArea className="flex-1 bg-zinc-900/30 border border-zinc-800 rounded-md mt-2 p-6">
+              <TabsContent value="safety" className="mt-0 space-y-6">
+                <div className="bg-red-900/10 border border-red-900/30 p-4 rounded-lg">
+                    <h3 className="text-lg font-bold text-red-400 mb-2 flex items-center gap-2">
+                        <AlertTriangle className="w-5 h-5" />
+                        IMPORTANT: Local-First Architecture
+                    </h3>
+                    <p className="text-sm text-zinc-300 leading-relaxed">
+                        TacticalBind is a <strong>Local-First</strong> application. This means:
+                    </p>
+                    <ul className="list-disc list-inside text-sm text-zinc-400 mt-2 space-y-1">
+                        <li>We do <strong>NOT</strong> sync your data to GitHub, Cloudflare, or any external server.</li>
+                        <li>Your data lives entirely in your browser's <strong>Local Storage</strong>.</li>
+                        <li>If you clear your browser cache or use Incognito mode, your data will be <strong>LOST</strong> unless you export it.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 className="text-lg font-bold text-zinc-200 mb-2">How to Prevent Data Loss</h3>
+                    <div className="grid gap-4">
+                        <div className="bg-zinc-950 p-4 rounded border border-zinc-800">
+                            <h4 className="font-bold text-green-500 text-sm mb-1">1. Use Auto-Backup (Recommended)</h4>
+                            <p className="text-xs text-zinc-400">
+                                Click the Database icon <span className="inline-block align-middle"><ShieldCheck className="w-3 h-3"/></span> in the sidebar. 
+                                Select a file on your hard drive (e.g., <code>backup.json</code>). 
+                                The app will automatically save your work to this file every time you make a change.
+                            </p>
+                        </div>
+                        <div className="bg-zinc-950 p-4 rounded border border-zinc-800">
+                            <h4 className="font-bold text-blue-500 text-sm mb-1">2. Export Frequently</h4>
+                            <p className="text-xs text-zinc-400">
+                                Use the <strong>"Save Project"</strong> button (Ctrl+S) often. This creates a <code>.json</code> file that contains your entire setup (sets, macros, actions).
+                            </p>
+                        </div>
+                        <div className="bg-zinc-950 p-4 rounded border border-zinc-800">
+                            <h4 className="font-bold text-amber-500 text-sm mb-1">3. Closing the App</h4>
+                            <p className="text-xs text-zinc-400">
+                                You can safely close the tab if you see the green "Saved" indicator in the top bar. 
+                                If you see an amber "Unsaved Changes" warning, please export your work first.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+              </TabsContent>
               <TabsContent value="import" className="mt-0 space-y-6">
                 <div>
                     <h3 className="text-lg font-bold text-zinc-200 mb-2">Importing Keybinds</h3>
                     <p className="text-sm text-zinc-400 leading-relaxed">
-                    You can import a list of actions and their corresponding keys from a text file.
+                    You can import a list of actions and their corresponding keys from a text file. 
                     This populates your "Action Library" which you can then drag onto the controller.
                     </p>
                 </div>

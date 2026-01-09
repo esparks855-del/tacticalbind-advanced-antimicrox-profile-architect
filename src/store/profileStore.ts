@@ -11,6 +11,10 @@ interface ProfileState {
   activeSetId: string;
   selectedButtonId: string | null;
   isImporterOpen: boolean;
+  // Persistence State
+  lastModified: number;
+  isDirty: boolean;
+  backupHandle: FileSystemFileHandle | null; // Runtime only, not persisted
   // Actions
   setImporterOpen: (isOpen: boolean) => void;
   loadActions: (actions: Action[]) => void;
@@ -33,6 +37,9 @@ interface ProfileState {
   deleteMacro: (id: string) => void;
   // Settings
   updateDeadzone: (axis: string, value: number) => void;
+  // Persistence Actions
+  markSaved: () => void;
+  setBackupHandle: (handle: FileSystemFileHandle | null) => void;
   // Snapshot for Export
   getSnapshot: () => { profile: Profile, actions: Action[] };
 }
@@ -47,6 +54,11 @@ const createEmptySet = (id: string, name: string): Set => {
   });
   return { id, name, mappings };
 };
+// Helper to update modification timestamp
+const touch = (state: any) => ({
+    lastModified: Date.now(),
+    isDirty: true
+});
 export const useProfileStore = create<ProfileState>()(
   persist(
     (set, get) => ({
@@ -59,13 +71,17 @@ export const useProfileStore = create<ProfileState>()(
       activeSetId: INITIAL_SET_ID,
       selectedButtonId: null,
       isImporterOpen: false,
+      lastModified: Date.now(),
+      isDirty: false,
+      backupHandle: null,
       getSnapshot: () => {
         const state = get();
         return { profile: state.profile, actions: state.actions };
       },
       setImporterOpen: (isOpen) => set({ isImporterOpen: isOpen }),
       loadActions: (newActions) => set((state) => ({
-        actions: [...state.actions, ...newActions]
+        actions: [...state.actions, ...newActions],
+        ...touch(state)
       })),
       loadProject: (data) => set(() => {
         let profile = data.profile;
@@ -82,7 +98,9 @@ export const useProfileStore = create<ProfileState>()(
             profile,
             actions: data.actions,
             activeSetId: profile.sets[0]?.id || INITIAL_SET_ID,
-            selectedButtonId: null
+            selectedButtonId: null,
+            isDirty: false, // Reset dirty state on load
+            lastModified: Date.now()
         };
       }),
       resetProject: () => set(() => ({
@@ -93,7 +111,10 @@ export const useProfileStore = create<ProfileState>()(
         },
         actions: [],
         activeSetId: INITIAL_SET_ID,
-        selectedButtonId: null
+        selectedButtonId: null,
+        isDirty: false,
+        lastModified: Date.now(),
+        backupHandle: null
       })),
       addSet: (name) => set((state) => {
         const newId = `set-${uuidv4()}`;
@@ -102,7 +123,8 @@ export const useProfileStore = create<ProfileState>()(
             ...state.profile,
             sets: [...state.profile.sets, createEmptySet(newId, name)]
           },
-          activeSetId: newId
+          activeSetId: newId,
+          ...touch(state)
         };
       }),
       removeSet: (id) => set((state) => {
@@ -113,7 +135,8 @@ export const useProfileStore = create<ProfileState>()(
             ...state.profile,
             sets: newSets
           },
-          activeSetId: state.activeSetId === id ? newSets[0].id : state.activeSetId
+          activeSetId: state.activeSetId === id ? newSets[0].id : state.activeSetId,
+          ...touch(state)
         };
       }),
       selectSet: (id) => set({ activeSetId: id }),
@@ -146,7 +169,10 @@ export const useProfileStore = create<ProfileState>()(
         };
         const newSets = [...state.profile.sets];
         newSets[setIndex] = newSet;
-        return { profile: { ...state.profile, sets: newSets } };
+        return { 
+            profile: { ...state.profile, sets: newSets },
+            ...touch(state)
+        };
       }),
       assignMacro: (setId, buttonId, slotIndex, macroId) => set((state) => {
         const setIndex = state.profile.sets.findIndex(s => s.id === setId);
@@ -167,7 +193,10 @@ export const useProfileStore = create<ProfileState>()(
         };
         const newSets = [...state.profile.sets];
         newSets[setIndex] = newSet;
-        return { profile: { ...state.profile, sets: newSets } };
+        return { 
+            profile: { ...state.profile, sets: newSets },
+            ...touch(state)
+        };
       }),
       assignModeShift: (setId, buttonId, slotIndex, targetSetId) => set((state) => {
         const setIndex = state.profile.sets.findIndex(s => s.id === setId);
@@ -188,7 +217,10 @@ export const useProfileStore = create<ProfileState>()(
         };
         const newSets = [...state.profile.sets];
         newSets[setIndex] = newSet;
-        return { profile: { ...state.profile, sets: newSets } };
+        return { 
+            profile: { ...state.profile, sets: newSets },
+            ...touch(state)
+        };
       }),
       clearButtonMapping: (setId, buttonId) => set((state) => {
         const setIndex = state.profile.sets.findIndex(s => s.id === setId);
@@ -205,25 +237,31 @@ export const useProfileStore = create<ProfileState>()(
         };
         const newSets = [...state.profile.sets];
         newSets[setIndex] = newSet;
-        return { profile: { ...state.profile, sets: newSets } };
+        return { 
+            profile: { ...state.profile, sets: newSets },
+            ...touch(state)
+        };
       }),
       addMacro: (name, steps) => set((state) => ({
         profile: {
             ...state.profile,
             macros: [...state.profile.macros, { id: uuidv4(), name, steps }]
-        }
+        },
+        ...touch(state)
       })),
       updateMacro: (id, name, steps) => set((state) => ({
         profile: {
             ...state.profile,
             macros: state.profile.macros.map(m => m.id === id ? { ...m, name, steps } : m)
-        }
+        },
+        ...touch(state)
       })),
       deleteMacro: (id) => set((state) => ({
         profile: {
             ...state.profile,
             macros: state.profile.macros.filter(m => m.id !== id)
-        }
+        },
+        ...touch(state)
       })),
       updateDeadzone: (axis, value) => set((state) => ({
         profile: {
@@ -235,8 +273,11 @@ export const useProfileStore = create<ProfileState>()(
                 deadZone: value
             }
           }
-        }
-      }))
+        },
+        ...touch(state)
+      })),
+      markSaved: () => set({ isDirty: false }),
+      setBackupHandle: (handle) => set({ backupHandle: handle })
     }),
     {
       name: 'tactical-bind-storage',
@@ -245,6 +286,10 @@ export const useProfileStore = create<ProfileState>()(
         actions: state.actions,
         profile: state.profile,
         activeSetId: state.activeSetId,
+        lastModified: state.lastModified,
+        // We do NOT persist backupHandle as it is not serializable
+        // We do persist isDirty so user knows they have unsaved changes if they reload
+        isDirty: state.isDirty
       }),
     }
   )

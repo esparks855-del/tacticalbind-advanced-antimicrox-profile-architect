@@ -20,12 +20,14 @@ import { DraggableMacro } from '@/components/dnd/DraggableMacro';
 import { Action, Macro } from '@/types/antimicro';
 import { HelpModal } from '@/components/modals/HelpModal';
 import { DebugStateModal } from '@/components/modals/DebugStateModal';
+import { PersistenceGuard } from '@/components/persistence/PersistenceGuard';
 import { Button } from '@/components/ui/button';
-import { LifeBuoy, Cloud, Bug, Monitor, Globe } from 'lucide-react';
+import { LifeBuoy, Bug, Monitor, Globe, Save, HardDrive } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { isElectron } from '@/utils/platform';
 import { APP_NAME, APP_VERSION } from '@/utils/projectIdentity';
 import { toast } from 'sonner';
+import { formatDistanceToNow } from 'date-fns';
 type DragItem =
   | { type: 'action'; data: Action }
   | { type: 'macro'; data: Macro };
@@ -35,13 +37,26 @@ export function EditorLayout() {
   const activeSetId = useProfileStore(s => s.activeSetId);
   const loadProject = useProfileStore(s => s.loadProject);
   const setImporterOpen = useProfileStore(s => s.setImporterOpen);
+  // Persistence State
+  const isDirty = useProfileStore(s => s.isDirty);
+  const lastModified = useProfileStore(s => s.lastModified);
+  const backupHandle = useProfileStore(s => s.backupHandle);
   const [activeDragItem, setActiveDragItem] = React.useState<DragItem | null>(null);
   const [isHelpOpen, setHelpOpen] = useState(false);
   const [isDebugOpen, setDebugOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
+  const [timeAgo, setTimeAgo] = useState('just now');
   useEffect(() => {
     setIsDesktop(isElectron());
   }, []);
+  // Update "Saved X ago" timer
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTimeAgo(formatDistanceToNow(lastModified, { addSuffix: true }));
+    }, 10000); // Update every 10s
+    setTimeAgo(formatDistanceToNow(lastModified, { addSuffix: true }));
+    return () => clearInterval(interval);
+  }, [lastModified]);
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -102,8 +117,6 @@ export function EditorLayout() {
           toast.error('Failed to parse project JSON');
         }
       } else if (file.name.endsWith('.txt') || file.name.endsWith('.ini') || file.name.endsWith('.cfg')) {
-        // For text files, we can't easily inject into the Importer component state from here without a store update.
-        // So we'll just notify the user to use the import button for now, or open the modal.
         setImporterOpen(true);
         toast.info('Opened Importer. Please paste content or select file.', {
             description: 'Direct drag-to-import coming in next update.'
@@ -118,7 +131,8 @@ export function EditorLayout() {
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <TooltipProvider>
-        <div
+        <PersistenceGuard />
+        <div 
             className="flex h-screen w-full bg-zinc-950 text-zinc-100 overflow-hidden font-sans"
             onDrop={handleGlobalDrop}
             onDragOver={handleGlobalDragOver}
@@ -132,13 +146,27 @@ export function EditorLayout() {
             {/* Header */}
             <header className="h-14 flex-shrink-0 border-b border-zinc-800 flex items-center justify-between px-6 bg-zinc-950">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-amber-500 animate-pulse" />
+                <div className={`w-3 h-3 rounded-full ${isDirty ? 'bg-amber-500 animate-pulse' : 'bg-green-500'} transition-colors duration-500`} />
                 <h1 className="text-sm font-bold tracking-widest uppercase text-zinc-300">
                   {APP_NAME.split(' ')[0]}<span className="text-amber-500">{APP_NAME.split(' ')[1]}</span>
                 </h1>
                 <div className="flex items-center gap-2 text-xs text-zinc-500 border-l border-zinc-800 pl-4 ml-2">
-                  <Cloud className="w-3 h-3" />
-                  <span className="hidden sm:inline">Auto-save On</span>
+                  {backupHandle ? (
+                    <Tooltip>
+                      <TooltipTrigger className="flex items-center gap-1.5 text-green-500/80">
+                        <HardDrive className="w-3 h-3" />
+                        <span className="hidden sm:inline">Auto-Backup Active</span>
+                      </TooltipTrigger>
+                      <TooltipContent>Backing up to {backupHandle.name}</TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <Save className="w-3 h-3" />
+                      <span className="hidden sm:inline">
+                        {isDirty ? 'Unsaved Changes' : `Saved ${timeAgo}`}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2">

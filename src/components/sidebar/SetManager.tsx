@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useProfileStore } from '@/store/profileStore';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Layers, Trash2, Download, FileText, Save, Upload, Settings2, FileCode, RotateCcw, AlertTriangle, Bug, ArrowDownToLine, HelpCircle } from 'lucide-react';
+import { Plus, Layers, Trash2, Download, FileText, Save, Upload, Settings2, FileCode, RotateCcw, AlertTriangle, Bug, ArrowDownToLine, HelpCircle, Database } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { generateAntiMicroXXML } from '@/utils/antimicroxExporter';
 import { saveAs } from 'file-saver';
@@ -10,6 +10,7 @@ import { saveFileAs, downloadFile, openTextFile } from '@/utils/fileSystem';
 import { toast } from 'sonner';
 import { ControllerSettingsModal } from '@/components/modals/ControllerSettingsModal';
 import { XmlPreviewModal } from '@/components/modals/XmlPreviewModal';
+import { BackupSettingsModal } from '@/components/modals/BackupSettingsModal';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { APP_NAME, APP_VERSION, APP_ID } from '@/utils/projectIdentity';
 import { Profile } from '@/types/antimicro';
@@ -35,27 +36,26 @@ export function SetManager() {
   const setImporterOpen = useProfileStore(s => s.setImporterOpen);
   const loadProject = useProfileStore(s => s.loadProject);
   const resetProject = useProfileStore(s => s.resetProject);
+  const markSaved = useProfileStore(s => s.markSaved);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
   const [isPreviewOpen, setPreviewOpen] = useState(false);
   const [isResetAlertOpen, setResetAlertOpen] = useState(false);
+  const [isBackupModalOpen, setBackupModalOpen] = useState(false);
   // Helper to check if profile has any actual mappings
   const isProfileEmpty = (p: Profile): boolean => {
     // Check if any set has any button with any slot assigned
-    return !p.sets.some(set =>
-      Object.values(set.mappings).some(mapping =>
-        mapping.slots.some(slot =>
+    return !p.sets.some(set => 
+      Object.values(set.mappings).some(mapping => 
+        mapping.slots.some(slot => 
           slot.actionId || slot.macroId || slot.modeShiftId
         )
       )
     );
   };
   // IMPERATIVE EXPORT HANDLER (Smart Save)
-  // Uses getState() to guarantee fresh data, bypassing any potential React render staleness
   const handleExportXML = async () => {
     try {
-      // Fetch fresh state directly from store
       const { profile: freshProfile, actions: freshActions } = useProfileStore.getState().getSnapshot();
-      // 1. Validation: Check for empty profile
       if (isProfileEmpty(freshProfile)) {
         toast.error("Cannot export empty profile", {
           description: "Please map at least one button before exporting."
@@ -64,11 +64,10 @@ export function SetManager() {
       }
       toast.info("Preparing export...");
       const xml = generateAntiMicroXXML(freshProfile, freshActions);
-      // Use application/octet-stream to force browser to treat it as a download
       const blob = new Blob([xml], { type: 'application/octet-stream' });
-      // 2. Smart Save
       const saved = await saveFileAs(blob, 'profile.amgp');
       if (saved) {
+        markSaved(); // Mark as clean
         if (window.electronAPI) {
            toast.success('Profile saved successfully!');
         } else {
@@ -97,16 +96,15 @@ export function SetManager() {
         return;
       }
       const xml = generateAntiMicroXXML(freshProfile, freshActions);
-      // Use application/octet-stream to force browser to treat it as a download
       const blob = new Blob([xml], { type: 'application/octet-stream' });
-      // Calculate size for user confidence
       const sizeInBytes = blob.size;
-      const sizeDisplay = sizeInBytes > 1024
-        ? `${(sizeInBytes / 1024).toFixed(1)} KB`
+      const sizeDisplay = sizeInBytes > 1024 
+        ? `${(sizeInBytes / 1024).toFixed(1)} KB` 
         : `${sizeInBytes} bytes`;
       console.log(`Attempting download. Size: ${sizeDisplay}`);
       const started = await downloadFile(blob, 'profile.amgp');
       if (started) {
+        markSaved();
         toast.success(`Download started (${sizeDisplay})`, {
           description: 'Check your browser downloads folder. If nothing appears, use "View XML Code".'
         });
@@ -122,7 +120,6 @@ export function SetManager() {
   };
   const handleSaveProject = () => {
     try {
-      // Fetch fresh state directly from store
       const { profile: freshProfile, actions: freshActions } = useProfileStore.getState().getSnapshot();
       const projectData = {
         profile: freshProfile,
@@ -132,6 +129,7 @@ export function SetManager() {
       const json = JSON.stringify(projectData, null, 2);
       const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
       saveAs(blob, 'tactical-bind-project.json');
+      markSaved();
       toast.success('Project saved successfully!');
     } catch (error) {
       console.error(error);
@@ -202,9 +200,9 @@ export function SetManager() {
               <Layers className="w-4 h-4" />
               Mission Sets
               </h2>
-              <Button
-                  variant="ghost"
-                  size="icon"
+              <Button 
+                  variant="ghost" 
+                  size="icon" 
                   className="h-6 w-6 text-zinc-500 hover:text-amber-500"
                   onClick={() => setSettingsOpen(true)}
                   title="Controller Settings"
@@ -212,7 +210,7 @@ export function SetManager() {
                   <Settings2 className="w-4 h-4" />
               </Button>
           </div>
-          <Button
+          <Button 
             onClick={() => addSet(`Set ${profile.sets.length + 1}`)}
             className="w-full bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800"
             size="sm"
@@ -254,11 +252,22 @@ export function SetManager() {
         </ScrollArea>
         <div className="p-4 border-t border-zinc-800 bg-zinc-950 space-y-3">
           <div className="space-y-2">
-              <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider">Project Files</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider">Project Files</h3>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-5 w-5 text-zinc-600 hover:text-amber-500"
+                  onClick={() => setBackupModalOpen(true)}
+                  title="Auto-Backup Settings"
+                >
+                  <Database className="w-3 h-3" />
+                </Button>
+              </div>
               <div className="grid grid-cols-2 gap-2">
-                  <Button
-                      variant="outline"
-                      size="sm"
+                  <Button 
+                      variant="outline" 
+                      size="sm" 
                       className="border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900"
                       onClick={handleSaveProject}
                       title="Save Project (Ctrl+S)"
@@ -266,9 +275,9 @@ export function SetManager() {
                       <Save className="w-3 h-3 mr-2" />
                       Save
                   </Button>
-                  <Button
-                      variant="outline"
-                      size="sm"
+                  <Button 
+                      variant="outline" 
+                      size="sm" 
                       className="border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900"
                       onClick={handleLoadProject}
                   >
@@ -276,9 +285,9 @@ export function SetManager() {
                       Load
                   </Button>
               </div>
-              <Button
-                  variant="ghost"
-                  size="sm"
+              <Button 
+                  variant="ghost" 
+                  size="sm" 
                   className="w-full text-red-900 hover:text-red-500 hover:bg-red-950/30 text-xs h-7"
                   onClick={() => setResetAlertOpen(true)}
               >
@@ -288,8 +297,8 @@ export function SetManager() {
           </div>
           <div className="space-y-2 pt-2 border-t border-zinc-900">
               <h3 className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider">Actions</h3>
-              <Button
-                variant="outline"
+              <Button 
+                variant="outline" 
                 className="w-full border-zinc-700 text-zinc-400 hover:text-amber-500 hover:border-amber-500 hover:bg-zinc-900"
                 onClick={() => setImporterOpen(true)}
               >
@@ -298,8 +307,8 @@ export function SetManager() {
               </Button>
               <div className="grid grid-cols-1 gap-2">
                   <div className="flex items-center gap-2">
-                    <Button
-                        variant="secondary"
+                    <Button 
+                        variant="secondary" 
                         className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700"
                         onClick={() => setPreviewOpen(true)}
                     >
@@ -318,7 +327,7 @@ export function SetManager() {
                     </Tooltip>
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Button
+                    <Button 
                         className="w-full bg-amber-600 hover:bg-amber-700 text-white"
                         onClick={handleExportXML}
                         title="Save As... (Ctrl+E)"
@@ -326,8 +335,8 @@ export function SetManager() {
                         <Download className="w-4 h-4 mr-2" />
                         Save As...
                     </Button>
-                    <Button
-                        variant="outline"
+                    <Button 
+                        variant="outline" 
                         className="w-full bg-zinc-900 border-zinc-700 text-zinc-400 hover:text-amber-500 hover:border-amber-500"
                         onClick={handleDirectDownload}
                         title="Force Download"
@@ -337,9 +346,9 @@ export function SetManager() {
                     </Button>
                   </div>
               </div>
-              <Button
-                  variant="ghost"
-                  size="sm"
+              <Button 
+                  variant="ghost" 
+                  size="sm" 
                   className="w-full text-zinc-600 hover:text-zinc-400 text-[10px] h-6 mt-2"
                   onClick={handleFullStateExport}
                   title="Dump full project state for debugging"
@@ -349,13 +358,17 @@ export function SetManager() {
               </Button>
           </div>
         </div>
-        <ControllerSettingsModal
-          isOpen={isSettingsOpen}
-          onClose={() => setSettingsOpen(false)}
+        <ControllerSettingsModal 
+          isOpen={isSettingsOpen} 
+          onClose={() => setSettingsOpen(false)} 
         />
-        <XmlPreviewModal
-          isOpen={isPreviewOpen}
-          onClose={() => setPreviewOpen(false)}
+        <XmlPreviewModal 
+          isOpen={isPreviewOpen} 
+          onClose={() => setPreviewOpen(false)} 
+        />
+        <BackupSettingsModal
+          isOpen={isBackupModalOpen}
+          onClose={() => setBackupModalOpen(false)}
         />
         <AlertDialog open={isResetAlertOpen} onOpenChange={setResetAlertOpen}>
           <AlertDialogContent className="bg-zinc-950 border-zinc-800 text-zinc-100">
