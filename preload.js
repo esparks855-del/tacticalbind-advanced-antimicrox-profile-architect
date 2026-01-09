@@ -1,13 +1,10 @@
-/**
- * Preload script for TacticalBind Architect
- * 
- * Since nodeIntegration is enabled for this local tool, we don't strictly need
- * a context bridge for functionality, but this file is required for standard
- * Electron architecture and future security hardening.
- */
+import { ipcRenderer } from 'electron';
 window.addEventListener('DOMContentLoaded', () => {
-  console.log('TacticalBind Architect: Preload script loaded successfully.');
-  // Log environment details for debugging
+  console.log('TacticalBind Architect: Preload script loaded.');
+  // Expose safe APIs to the renderer
+  window.electronAPI = {
+    saveFile: (content, filename) => ipcRenderer.invoke('save-file', content, filename)
+  };
   const replaceText = (selector, text) => {
     const element = document.getElementById(selector)
     if (element) element.innerText = text

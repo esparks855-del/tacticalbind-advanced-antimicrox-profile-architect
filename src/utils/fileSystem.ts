@@ -1,30 +1,18 @@
 /**
  * Forces a direct browser download using a native DOM anchor tag.
- * This is often more reliable than file-saver in certain environments (Electron, strict sandboxes).
- * Falls back to file-saver if the DOM method fails.
- *
- * @param blob The data to download
- * @param name The file name
- * @returns Promise<boolean> true if download started
+ * This is often more reliable than file-saver in certain environments.
  */
 export async function downloadFile(blob: Blob, name: string): Promise<boolean> {
   try {
-    // Method 1: Native DOM Anchor Click (Most reliable for forcing downloads)
     console.log("Attempting native DOM download");
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.style.display = 'none';
     a.href = url;
     a.download = name;
-    // Force new tab context which sometimes bypasses iframe/sandbox restrictions
-    a.target = '_blank'; 
-    // Append to body is required for Firefox
+    a.target = '_blank';
     document.body.appendChild(a);
-    // Programmatic click
     a.click();
-    // Cleanup after a SIGNIFICANT delay (60s) to ensure the browser has time to 
-    // hand off the blob to the download manager, especially if virus scans are active.
-    // Previous 1s timeout was causing "Network Error" or silent failures in some browsers.
     setTimeout(() => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
@@ -36,16 +24,30 @@ export async function downloadFile(blob: Blob, name: string): Promise<boolean> {
   }
 }
 /**
- * Smart save utility that attempts to use the Native File System API
- * for a true "Save As" experience, falling back to the robust downloadFile utility.
+ * Smart save utility that intelligently chooses the best saving mechanism
+ * based on the environment (Electron EXE vs Browser).
  *
- * @param blob The data to save
- * @param suggestedName The default file name
- * @returns Promise<boolean> true if saved, false if cancelled (where detectable)
+ * Priority:
+ * 1. Electron Native Dialog (via IPC) - Guaranteed Explorer Window
+ * 2. File System Access API (Chrome/Edge) - Native-like "Save As"
+ * 3. DOM Download Fallback - Standard browser download
  */
 export async function saveFileAs(blob: Blob, suggestedName: string): Promise<boolean> {
-  // 1. Try Native File System API (Chrome, Edge, Opera, Electron)
-  // This provides a true "Save As" dialog where the user can choose the location
+  // 1. Electron Native Path (The "Correct" way for EXE)
+  if (window.electronAPI) {
+    try {
+      const text = await blob.text();
+      const result = await window.electronAPI.saveFile(text, suggestedName);
+      if (result.canceled) return false;
+      if (result.success) return true;
+      throw new Error(result.error || 'Unknown Electron save error');
+    } catch (err) {
+      console.error('Electron save failed:', err);
+      // Fallthrough to other methods if IPC fails for some reason
+    }
+  }
+  // 2. Modern Browser API (Chrome, Edge, Opera)
+  // Provides a true "Save As" dialog in the browser
   if (typeof window.showSaveFilePicker === 'function') {
     try {
       const handle = await window.showSaveFilePicker({
@@ -64,15 +66,10 @@ export async function saveFileAs(blob: Blob, suggestedName: string): Promise<boo
       await writable.close();
       return true;
     } catch (err: any) {
-      // User cancelled the picker
-      if (err.name === 'AbortError') {
-        return false;
-      }
-      // Other errors (permissions, etc) - log and attempt fallback
+      if (err.name === 'AbortError') return false;
       console.warn('File System API failed, attempting fallback', err);
     }
   }
-  // 2. Fallback: downloadFile (Native DOM) instead of direct saveAs
-  // This ensures we try the most robust method if the fancy API fails
+  // 3. Universal Fallback (Firefox, Safari, Mobile)
   return await downloadFile(blob, suggestedName);
 }

@@ -8,6 +8,10 @@ declare global {
         [key: string]: string | undefined;
       };
     };
+    // Native Electron API Bridge
+    electronAPI?: {
+      saveFile: (content: string, filename: string) => Promise<{ success: boolean; canceled?: boolean; error?: string }>;
+    };
     // File System Access API
     showSaveFilePicker?: (options?: SaveFilePickerOptions) => Promise<FileSystemFileHandle>;
   }

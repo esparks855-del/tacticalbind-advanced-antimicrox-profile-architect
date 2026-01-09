@@ -42,9 +42,9 @@ export function SetManager() {
   // Helper to check if profile has any actual mappings
   const isProfileEmpty = (p: Profile): boolean => {
     // Check if any set has any button with any slot assigned
-    return !p.sets.some(set => 
-      Object.values(set.mappings).some(mapping => 
-        mapping.slots.some(slot => 
+    return !p.sets.some(set =>
+      Object.values(set.mappings).some(mapping =>
+        mapping.slots.some(slot =>
           slot.actionId || slot.macroId || slot.modeShiftId
         )
       )
@@ -70,9 +70,13 @@ export function SetManager() {
       // 2. Smart Save
       const saved = await saveFileAs(blob, 'profile.amgp');
       if (saved) {
-        toast.success('Profile exported successfully!', {
-          description: "If no file appeared, try 'View XML Code' below."
-        });
+        if (window.electronAPI) {
+           toast.success('Profile saved successfully!');
+        } else {
+           toast.success('Profile exported successfully!', {
+             description: "If no file appeared, try 'View XML Code' below."
+           });
+        }
       } else {
         console.log('Export cancelled or failed silently');
       }
@@ -98,8 +102,8 @@ export function SetManager() {
       const blob = new Blob([xml], { type: 'application/octet-stream' });
       // Calculate size for user confidence
       const sizeInBytes = blob.size;
-      const sizeDisplay = sizeInBytes > 1024 
-        ? `${(sizeInBytes / 1024).toFixed(1)} KB` 
+      const sizeDisplay = sizeInBytes > 1024
+        ? `${(sizeInBytes / 1024).toFixed(1)} KB`
         : `${sizeInBytes} bytes`;
       console.log(`Attempting download. Size: ${sizeDisplay}`);
       const started = await downloadFile(blob, 'profile.amgp');
@@ -214,7 +218,7 @@ export function SetManager() {
                   <Settings2 className="w-4 h-4" />
               </Button>
           </div>
-          <Button 
+          <Button
             onClick={() => addSet(`Set ${profile.sets.length + 1}`)}
             className="w-full bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800"
             size="sm"

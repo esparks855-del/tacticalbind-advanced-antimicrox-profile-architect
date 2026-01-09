@@ -1,5 +1,6 @@
-import { app, BrowserWindow, screen } from 'electron';
+import { app, BrowserWindow, screen, ipcMain, dialog } from 'electron';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,19 +18,17 @@ if (!gotTheLock) {
       minWidth: 1024,
       minHeight: 768,
       title: "TacticalBind Architect",
-      backgroundColor: '#09090b', // Match zinc-950
-      show: false, // Don't show until ready to prevent white flash
+      backgroundColor: '#09090b',
+      show: false,
       webPreferences: {
         nodeIntegration: true,
-        contextIsolation: false,
-        webSecurity: false, // Allow local file access for development ease
+        contextIsolation: false, // Kept false for compatibility with current architecture
+        webSecurity: false,
         devTools: true,
         preload: path.join(__dirname, 'preload.js')
       },
     });
-    // Maximize by default for productivity app feel
     mainWindow.maximize();
-    // Load the app
     const isDev = process.env.NODE_ENV === 'development' || process.argv.includes('--dev');
     if (isDev) {
       console.log('🔌 Loading from localhost:3000');
@@ -38,7 +37,6 @@ if (!gotTheLock) {
       });
       mainWindow.webContents.openDevTools();
     } else {
-      // Production: Load from dist
       const indexPath = path.join(__dirname, 'dist', 'index.html');
       console.log(`📦 Loading from file: ${indexPath}`);
       mainWindow.loadFile(indexPath).catch(e => {
@@ -52,6 +50,27 @@ if (!gotTheLock) {
       mainWindow = null;
     });
   };
+  // IPC Handlers
+  ipcMain.handle('save-file', async (event, content, filename) => {
+    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+      title: 'Save Profile',
+      defaultPath: filename,
+      filters: [
+        { name: 'AntiMicroX Profile', extensions: ['amgp', 'xml'] },
+        { name: 'All Files', extensions: ['*'] }
+      ]
+    });
+    if (canceled || !filePath) {
+      return { canceled: true };
+    }
+    try {
+      await fs.promises.writeFile(filePath, content, 'utf-8');
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to save file:', error);
+      return { success: false, error: error.message };
+    }
+  });
   app.whenReady().then(() => {
     createWindow();
     app.on('activate', () => {
