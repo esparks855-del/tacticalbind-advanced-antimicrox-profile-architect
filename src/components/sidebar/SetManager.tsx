@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { useProfileStore } from '@/store/profileStore';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Layers, Trash2, Download, FileText, Save, Upload, Settings2, FileCode, RotateCcw, AlertTriangle, Bug, ArrowDownToLine } from 'lucide-react';
+import { Plus, Layers, Trash2, Download, FileText, Save, Upload, Settings2, FileCode, RotateCcw, AlertTriangle, Bug, ArrowDownToLine, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { generateAntiMicroXXML } from '@/utils/antimicroxExporter';
 import { saveAs } from 'file-saver';
@@ -23,7 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { TooltipProvider } from '@/components/ui/tooltip';
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 export function SetManager() {
   // UI State Hooks (Reactive)
   const profile = useProfileStore(s => s.profile);
@@ -42,9 +42,9 @@ export function SetManager() {
   // Helper to check if profile has any actual mappings
   const isProfileEmpty = (p: Profile): boolean => {
     // Check if any set has any button with any slot assigned
-    return !p.sets.some(set =>
-      Object.values(set.mappings).some(mapping =>
-        mapping.slots.some(slot =>
+    return !p.sets.some(set => 
+      Object.values(set.mappings).some(mapping => 
+        mapping.slots.some(slot => 
           slot.actionId || slot.macroId || slot.modeShiftId
         )
       )
@@ -65,17 +65,15 @@ export function SetManager() {
       }
       toast.info("Preparing export...");
       const xml = generateAntiMicroXXML(freshProfile, freshActions);
-      const blob = new Blob([xml], { type: 'application/xml;charset=utf-8' });
+      // Use application/octet-stream to force browser to treat it as a download
+      const blob = new Blob([xml], { type: 'application/octet-stream' });
       // 2. Smart Save
       const saved = await saveFileAs(blob, 'profile.amgp');
       if (saved) {
-        toast.success('Profile exported successfully!');
+        toast.success('Profile exported successfully!', {
+          description: "If no file appeared, try 'View XML Code' below."
+        });
       } else {
-        // If it returned false, it might be cancelled or failed.
-        // We don't want to annoy user if they just cancelled, but if it failed silently...
-        // The saveFileAs logic handles cancellation by returning false.
-        // We can assume if they cancelled, they know it.
-        // But if it failed, we might want to suggest the other button.
         console.log('Export cancelled or failed silently');
       }
     } catch (error) {
@@ -96,21 +94,22 @@ export function SetManager() {
         return;
       }
       const xml = generateAntiMicroXXML(freshProfile, freshActions);
-      const blob = new Blob([xml], { type: 'application/xml;charset=utf-8' });
+      // Use application/octet-stream to force browser to treat it as a download
+      const blob = new Blob([xml], { type: 'application/octet-stream' });
       // Calculate size for user confidence
       const sizeInBytes = blob.size;
-      const sizeDisplay = sizeInBytes > 1024
-        ? `${(sizeInBytes / 1024).toFixed(1)} KB`
+      const sizeDisplay = sizeInBytes > 1024 
+        ? `${(sizeInBytes / 1024).toFixed(1)} KB` 
         : `${sizeInBytes} bytes`;
       console.log(`Attempting download. Size: ${sizeDisplay}`);
       const started = await downloadFile(blob, 'profile.amgp');
       if (started) {
         toast.success(`Download started (${sizeDisplay})`, {
-          description: 'Check your browser downloads folder.'
+          description: 'Check your browser downloads folder. If nothing appears, use "View XML Code".'
         });
       } else {
         toast.error('Download failed to start', {
-            description: 'Please check browser permissions.'
+            description: 'Please check browser permissions or use "View XML Code" to copy manually.'
         });
       }
     } catch (error) {
@@ -215,7 +214,7 @@ export function SetManager() {
                   <Settings2 className="w-4 h-4" />
               </Button>
           </div>
-          <Button
+          <Button 
             onClick={() => addSet(`Set ${profile.sets.length + 1}`)}
             className="w-full bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800"
             size="sm"
@@ -307,14 +306,26 @@ export function SetManager() {
                 Import Keybinds
               </Button>
               <div className="grid grid-cols-1 gap-2">
-                  <Button
-                      variant="secondary"
-                      className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700"
-                      onClick={() => setPreviewOpen(true)}
-                  >
-                      <FileCode className="w-4 h-4 mr-2" />
-                      View XML Code
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                        variant="secondary"
+                        className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700"
+                        onClick={() => setPreviewOpen(true)}
+                    >
+                        <FileCode className="w-4 h-4 mr-2" />
+                        View XML Code
+                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="cursor-help text-zinc-500 hover:text-zinc-300">
+                          <HelpCircle className="w-4 h-4" />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Use this if download fails (Manual Export)</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
                   <div className="flex flex-col gap-2">
                     <Button
                         className="w-full bg-amber-600 hover:bg-amber-700 text-white"

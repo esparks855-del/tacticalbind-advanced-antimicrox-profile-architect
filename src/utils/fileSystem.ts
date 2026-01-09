@@ -1,4 +1,3 @@
-import { saveAs } from 'file-saver';
 /**
  * Forces a direct browser download using a native DOM anchor tag.
  * This is often more reliable than file-saver in certain environments (Electron, strict sandboxes).
@@ -11,31 +10,29 @@ import { saveAs } from 'file-saver';
 export async function downloadFile(blob: Blob, name: string): Promise<boolean> {
   try {
     // Method 1: Native DOM Anchor Click (Most reliable for forcing downloads)
+    console.log("Attempting native DOM download");
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.style.display = 'none';
     a.href = url;
     a.download = name;
+    // Force new tab context which sometimes bypasses iframe/sandbox restrictions
+    a.target = '_blank'; 
     // Append to body is required for Firefox
     document.body.appendChild(a);
     // Programmatic click
     a.click();
-    // Cleanup after a short delay to ensure the click registered
+    // Cleanup after a SIGNIFICANT delay (60s) to ensure the browser has time to 
+    // hand off the blob to the download manager, especially if virus scans are active.
+    // Previous 1s timeout was causing "Network Error" or silent failures in some browsers.
     setTimeout(() => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    }, 100);
+    }, 60000);
     return true;
   } catch (error) {
-    console.warn('Native download failed, attempting fallback', error);
-    // Method 2: FileSaver Fallback
-    try {
-      saveAs(blob, name);
-      return true;
-    } catch (fsError) {
-      console.error('All download methods failed', fsError);
-      return false;
-    }
+    console.error('Native download failed', error);
+    return false;
   }
 }
 /**
