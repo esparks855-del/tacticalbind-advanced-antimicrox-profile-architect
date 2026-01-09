@@ -14,7 +14,7 @@ interface ProfileState {
   // Actions
   setImporterOpen: (isOpen: boolean) => void;
   loadActions: (actions: Action[]) => void;
-  loadProject: (data: { profile: any, actions: Action[] }) => void; // Using any for profile to handle migration
+  loadProject: (data: { profile: any, actions: Action[] }) => void;
   resetProject: () => void;
   // Set Management
   addSet: (name: string) => void;
@@ -26,6 +26,7 @@ interface ProfileState {
   updateAssignment: (setId: string, buttonId: string, slotIndex: number, actionId: string | null) => void;
   assignMacro: (setId: string, buttonId: string, slotIndex: number, macroId: string) => void;
   assignModeShift: (setId: string, buttonId: string, slotIndex: number, targetSetId: string) => void;
+  clearButtonMapping: (setId: string, buttonId: string) => void; // New action
   // Macro Management
   addMacro: (name: string, steps: MacroStep[]) => void;
   updateMacro: (id: string, name: string, steps: MacroStep[]) => void;
@@ -61,7 +62,6 @@ export const useProfileStore = create<ProfileState>()(
         actions: [...state.actions, ...newActions]
       })),
       loadProject: (data) => set(() => {
-        // Migration for legacy deadzones
         let profile = data.profile;
         if (data.profile.deadzones && !data.profile.axisConfig) {
             const axisConfig: Record<string, any> = {};
@@ -69,7 +69,6 @@ export const useProfileStore = create<ProfileState>()(
                 axisConfig[k] = { deadZone: v };
             });
             profile = { ...data.profile, axisConfig };
-            // Remove legacy deadzones to clean up
             delete profile.deadzones;
         }
         return {
@@ -96,11 +95,11 @@ export const useProfileStore = create<ProfileState>()(
             ...state.profile,
             sets: [...state.profile.sets, createEmptySet(newId, name)]
           },
-          activeSetId: newId // Auto-switch to new set
+          activeSetId: newId
         };
       }),
       removeSet: (id) => set((state) => {
-        if (state.profile.sets.length <= 1) return state; // Prevent deleting last set
+        if (state.profile.sets.length <= 1) return state;
         const newSets = state.profile.sets.filter(s => s.id !== id);
         return {
           profile: {
@@ -118,15 +117,12 @@ export const useProfileStore = create<ProfileState>()(
         const currentSet = state.profile.sets[setIndex];
         const currentMapping = currentSet.mappings[buttonId] || { id: buttonId, slots: [] };
         const newSlots = [...currentMapping.slots];
-        // Fill gaps
         while (newSlots.length <= slotIndex) {
           newSlots.push({ type: 'tap' });
         }
         if (actionId === null) {
-            // Clear assignment
             newSlots[slotIndex] = { ...newSlots[slotIndex], actionId: undefined, macroId: undefined, modeShiftId: undefined };
         } else {
-            // Set Action
             newSlots[slotIndex] = {
                 ...newSlots[slotIndex],
                 actionId,
@@ -182,6 +178,23 @@ export const useProfileStore = create<ProfileState>()(
         const newSet = {
           ...currentSet,
           mappings: { ...currentSet.mappings, [buttonId]: { ...currentMapping, slots: newSlots } }
+        };
+        const newSets = [...state.profile.sets];
+        newSets[setIndex] = newSet;
+        return { profile: { ...state.profile, sets: newSets } };
+      }),
+      clearButtonMapping: (setId, buttonId) => set((state) => {
+        const setIndex = state.profile.sets.findIndex(s => s.id === setId);
+        if (setIndex === -1) return state;
+        const currentSet = state.profile.sets[setIndex];
+        const currentMapping = currentSet.mappings[buttonId] || { id: buttonId, slots: [] };
+        // Reset slots to empty
+        const newSet = {
+          ...currentSet,
+          mappings: {
+            ...currentSet.mappings,
+            [buttonId]: { ...currentMapping, slots: [] }
+          }
         };
         const newSets = [...state.profile.sets];
         newSets[setIndex] = newSet;

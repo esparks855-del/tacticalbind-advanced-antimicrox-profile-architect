@@ -6,13 +6,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MousePointerClick, Zap, Layers, FileText, HelpCircle, Info } from 'lucide-react';
+import { MousePointerClick, Zap, Layers, FileText, HelpCircle, Info, Trash2 } from 'lucide-react';
 import { DraggableAction } from '@/components/dnd/DraggableAction';
 import { DraggableMacro } from '@/components/dnd/DraggableMacro';
 import { DroppableSlot } from '@/components/dnd/DroppableSlot';
 import { MacroEditor } from '@/components/inspector/MacroEditor';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-
 export function ConfigPanel() {
   const selectedButtonId = useProfileStore(s => s.selectedButtonId);
   const activeSetId = useProfileStore(s => s.activeSetId);
@@ -20,13 +19,12 @@ export function ConfigPanel() {
   const actions = useProfileStore(s => s.actions);
   const updateAssignment = useProfileStore(s => s.updateAssignment);
   const assignModeShift = useProfileStore(s => s.assignModeShift);
+  const clearButtonMapping = useProfileStore(s => s.clearButtonMapping);
   const addMacro = useProfileStore(s => s.addMacro);
   const [isMacroEditorOpen, setMacroEditorOpen] = useState(false);
-
   const selectedButton = CONTROLLER_BUTTONS.find(b => b.id === selectedButtonId);
   const activeSet = profile.sets.find(s => s.id === activeSetId);
   const mapping = activeSet?.mappings[selectedButtonId || ''];
-
   if (!selectedButtonId || !selectedButton) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-zinc-500 bg-zinc-950 border-l border-zinc-800 p-8 text-center">
@@ -43,7 +41,7 @@ export function ConfigPanel() {
             </h4>
             <ul className="space-y-2 text-xs text-zinc-400">
                 <li className="flex items-start gap-2">
-                    <span className="text-zinc-600">•</span>
+                    <span className="text-zinc-600">���</span>
                     <span><strong>Drag & Drop</strong> actions from the library below into slots.</span>
                 </li>
                 <li className="flex items-start gap-2">
@@ -59,11 +57,9 @@ export function ConfigPanel() {
       </div>
     );
   }
-
   const getSlotContent = (index: number) => {
     const slot = mapping?.slots?.[index];
     if (!slot) return <span className="text-zinc-500 text-sm italic">Empty - Drag Action Here</span>;
-
     if (slot.modeShiftId) {
         const targetSet = profile.sets.find(s => s.id === slot.modeShiftId);
         return (
@@ -73,7 +69,6 @@ export function ConfigPanel() {
             </div>
         );
     }
-
     if (slot.macroId) {
         const macro = profile.macros.find(m => m.id === slot.macroId);
         return (
@@ -83,7 +78,6 @@ export function ConfigPanel() {
             </div>
         );
     }
-
     if (slot.actionId) {
         const action = actions.find(a => a.id === slot.actionId);
         return (
@@ -95,30 +89,48 @@ export function ConfigPanel() {
             </div>
         );
     }
-
     return <span className="text-zinc-500 text-sm">Empty - Drag Item Here</span>;
   };
-
   const handleClearSlot = (index: number) => {
       if (activeSetId && selectedButtonId) {
           updateAssignment(activeSetId, selectedButtonId, index, null);
       }
   };
-
+  const handleClearAll = () => {
+      if (activeSetId && selectedButtonId) {
+          clearButtonMapping(activeSetId, selectedButtonId);
+      }
+  };
   return (
     <TooltipProvider>
         <div className="h-full flex flex-col bg-zinc-950 border-l border-zinc-800">
         {/* Header */}
         <div className="p-6 border-b border-zinc-800 bg-zinc-900/30">
             <div className="flex items-center justify-between mb-2">
-            <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 px-3 py-1">
-                {selectedButton.type.toUpperCase()}
-            </Badge>
-            <span className="text-xs font-mono text-zinc-500">ID: {selectedButton.id}</span>
+                <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 px-3 py-1">
+                    {selectedButton.type.toUpperCase()}
+                </Badge>
+                <div className="flex items-center gap-2">
+                    <span className="text-xs font-mono text-zinc-500">ID: {selectedButton.id}</span>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-zinc-500 hover:text-red-500 hover:bg-red-900/10"
+                                onClick={handleClearAll}
+                            >
+                                <Trash2 className="w-3 h-3" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Clear All Assignments</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </div>
             </div>
             <h2 className="text-3xl font-bold text-white tracking-tight">{selectedButton.label}</h2>
         </div>
-
         {/* Main Content */}
         <div className="flex-1 flex flex-col min-h-0">
             <Tabs defaultValue="tap" className="flex-1 flex flex-col">
@@ -191,7 +203,6 @@ export function ConfigPanel() {
                                 </Select>
                             </div>
                         </TabsContent>
-
                         {/* HOLD TAB */}
                         <TabsContent value="hold" className="mt-0 space-y-4">
                             <div className="space-y-2">
@@ -251,7 +262,6 @@ export function ConfigPanel() {
                                 </Select>
                             </div>
                         </TabsContent>
-
                         {/* DOUBLE TAB */}
                         <TabsContent value="double" className="mt-0 space-y-4">
                             <div className="space-y-2">
@@ -268,7 +278,6 @@ export function ConfigPanel() {
                                 </DroppableSlot>
                             </div>
                         </TabsContent>
-
                         {/* RELEASE TAB */}
                         <TabsContent value="release" className="mt-0 space-y-4">
                             <div className="space-y-2">
@@ -289,7 +298,6 @@ export function ConfigPanel() {
                     </div>
                 </ScrollArea>
             </Tabs>
-
             {/* Library Section */}
             <div className="h-[350px] border-t border-zinc-800 flex flex-col bg-zinc-950">
                 <Tabs defaultValue="actions" className="flex-1 flex flex-col">
@@ -361,4 +369,3 @@ export function ConfigPanel() {
     </TooltipProvider>
   );
 }
-//
