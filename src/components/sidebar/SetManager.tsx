@@ -21,9 +21,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 export function SetManager() {
+  // UI State Hooks (Reactive)
   const profile = useProfileStore(s => s.profile);
-  const actions = useProfileStore(s => s.actions);
   const activeSetId = useProfileStore(s => s.activeSetId);
+  // Actions
   const selectSet = useProfileStore(s => s.selectSet);
   const addSet = useProfileStore(s => s.addSet);
   const removeSet = useProfileStore(s => s.removeSet);
@@ -34,22 +35,31 @@ export function SetManager() {
   const [isSettingsOpen, setSettingsOpen] = useState(false);
   const [isPreviewOpen, setPreviewOpen] = useState(false);
   const [isResetAlertOpen, setResetAlertOpen] = useState(false);
+  // IMPERATIVE EXPORT HANDLER
+  // Uses getState() to guarantee fresh data, bypassing any potential React render staleness
   const handleExportXML = () => {
     try {
-      const xml = generateAntiMicroXXML(profile, actions);
+      toast.info("Exporting from latest memory snapshot...");
+      // Fetch fresh state directly from store
+      const { profile: freshProfile, actions: freshActions } = useProfileStore.getState().getSnapshot();
+      const xml = generateAntiMicroXXML(freshProfile, freshActions);
       const blob = new Blob([xml], { type: 'application/xml;charset=utf-8' });
       saveAs(blob, 'profile.amgp');
       toast.success('Profile exported successfully!');
     } catch (error) {
-      console.error(error);
-      toast.error('Failed to generate profile XML');
+      console.error("Export Error:", error);
+      toast.error('Failed to generate profile XML', {
+        description: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   };
   const handleSaveProject = () => {
     try {
+      // Fetch fresh state directly from store
+      const { profile: freshProfile, actions: freshActions } = useProfileStore.getState().getSnapshot();
       const projectData = {
-        profile,
-        actions,
+        profile: freshProfile,
+        actions: freshActions,
         version: '1.0'
       };
       const json = JSON.stringify(projectData, null, 2);
@@ -65,11 +75,11 @@ export function SetManager() {
   useHotkeys('ctrl+s, meta+s', (e) => {
     e.preventDefault();
     handleSaveProject();
-  }, { enableOnFormTags: true }, [profile, actions]);
+  }, { enableOnFormTags: true });
   useHotkeys('ctrl+e, meta+e', (e) => {
     e.preventDefault();
     handleExportXML();
-  }, { enableOnFormTags: true }, [profile, actions]);
+  }, { enableOnFormTags: true });
   const handleLoadProject = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -211,10 +221,7 @@ export function SetManager() {
                 <Button
                     variant="secondary"
                     className="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700"
-                    onClick={() => {
-                        console.log('Opening XML Preview');
-                        setPreviewOpen(true);
-                    }}
+                    onClick={() => setPreviewOpen(true)}
                 >
                     <FileCode className="w-4 h-4 mr-2" />
                     View XML Code

@@ -58,11 +58,6 @@ const generateSlotXML = (slot: Slot, profile: Profile, actions: Action[]): strin
   if (slot.macroId) {
     const macro = profile.macros.find(m => m.id === slot.macroId);
     if (macro) {
-      // For macros, we use <event> tags usually, but strict schema asks for <code> and <mode>
-      // However, AntiMicroX supports <event> in slots for macros.
-      // We will output <event> tags.
-      // Note: If strict schema validation fails on <event>, we might need to rethink, 
-      // but standard AntiMicroX macros use <event>.
       macro.steps.forEach(step => {
         if (step.type === 'delay') {
           xml += `                <event type="delay" value="${step.value}"/>\n`;
@@ -112,6 +107,19 @@ ${slotsXML}        </slots>
     </button>\n`;
 };
 export const generateAntiMicroXXML = (profile: Profile, actions: Action[]): string => {
+  // Debug Logging for User Transparency
+  console.group('XML Generation Debug');
+  console.log('Timestamp:', new Date().toISOString());
+  console.log('Sets Count:', profile.sets.length);
+  console.log('Actions Count:', actions.length);
+  console.log('Macros Count:', profile.macros.length);
+  console.log('Profile Data Snapshot:', JSON.parse(JSON.stringify(profile)));
+  console.groupEnd();
+  if (!profile.sets || profile.sets.length === 0) {
+      const errorMsg = "Export failed: Profile has 0 sets. This indicates a state desync or corrupted project.";
+      console.error(errorMsg);
+      throw new Error(errorMsg);
+  }
   let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
   xml += '<gamecontroller configversion="19" appversion="2.20.2">\n';
   xml += '<sdlname>TacticalBind Controller</sdlname>\n';
@@ -130,7 +138,6 @@ export const generateAntiMicroXXML = (profile: Profile, actions: Action[]): stri
     // Initialize Sticks (1 and 2) with config
     [1, 2].forEach(i => {
         const axisX = i === 1 ? 'leftx' : 'rightx';
-        // const axisY = i === 1 ? 'lefty' : 'righty'; // Usually share config in simple UI
         const config = profile.axisConfig[axisX] || {};
         stickMappings[i] = {
             deadZone: config.deadZone || 0,
@@ -177,10 +184,6 @@ export const generateAntiMicroXXML = (profile: Profile, actions: Action[]): stri
     Object.values(buttonMappings).forEach(b => xml += b);
     // Output Sticks
     Object.entries(stickMappings).forEach(([index, data]) => {
-        // Only output if modified (deadzone > 0 or buttons mapped)
-        // Actually, strict schema might prefer listing them if they exist on controller?
-        // But usually we only list what's configured.
-        // However, deadzones are important.
         const hasButtons = Object.keys(data.buttons).length > 0;
         if (data.deadZone > 0 || data.maxZone > 0 || hasButtons) {
             xml += `    <stick index="${index}">\n`;

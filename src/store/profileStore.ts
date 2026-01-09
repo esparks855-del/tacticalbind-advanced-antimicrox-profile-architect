@@ -26,13 +26,15 @@ interface ProfileState {
   updateAssignment: (setId: string, buttonId: string, slotIndex: number, actionId: string | null) => void;
   assignMacro: (setId: string, buttonId: string, slotIndex: number, macroId: string) => void;
   assignModeShift: (setId: string, buttonId: string, slotIndex: number, targetSetId: string) => void;
-  clearButtonMapping: (setId: string, buttonId: string) => void; // New action
+  clearButtonMapping: (setId: string, buttonId: string) => void;
   // Macro Management
   addMacro: (name: string, steps: MacroStep[]) => void;
   updateMacro: (id: string, name: string, steps: MacroStep[]) => void;
   deleteMacro: (id: string) => void;
   // Settings
   updateDeadzone: (axis: string, value: number) => void;
+  // Snapshot for Export
+  getSnapshot: () => { profile: Profile, actions: Action[] };
 }
 const INITIAL_SET_ID = 'set-1';
 const createEmptySet = (id: string, name: string): Set => {
@@ -47,7 +49,7 @@ const createEmptySet = (id: string, name: string): Set => {
 };
 export const useProfileStore = create<ProfileState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       actions: [],
       profile: {
         sets: [createEmptySet(INITIAL_SET_ID, 'Set 1')],
@@ -57,12 +59,17 @@ export const useProfileStore = create<ProfileState>()(
       activeSetId: INITIAL_SET_ID,
       selectedButtonId: null,
       isImporterOpen: false,
+      getSnapshot: () => {
+        const state = get();
+        return { profile: state.profile, actions: state.actions };
+      },
       setImporterOpen: (isOpen) => set({ isImporterOpen: isOpen }),
       loadActions: (newActions) => set((state) => ({
         actions: [...state.actions, ...newActions]
       })),
       loadProject: (data) => set(() => {
         let profile = data.profile;
+        // Legacy support for old deadzones format
         if (data.profile.deadzones && !data.profile.axisConfig) {
             const axisConfig: Record<string, any> = {};
             Object.entries(data.profile.deadzones).forEach(([k, v]) => {
