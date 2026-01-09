@@ -23,7 +23,8 @@ if (!gotTheLock) {
         nodeIntegration: true,
         contextIsolation: false,
         webSecurity: false, // Allow local file access for development ease
-        devTools: true
+        devTools: true,
+        preload: path.join(__dirname, 'preload.js')
       },
     });
     // Maximize by default for productivity app feel
