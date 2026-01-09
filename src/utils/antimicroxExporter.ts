@@ -33,6 +33,17 @@ const MAPPING: Record<string, AntiMicroElement> = {
   'DPadLeft': { type: 'dpad', index: 1, subIndex: 8 },
   'LT': { type: 'trigger', index: 5, subIndex: 2 },
   'RT': { type: 'trigger', index: 6, subIndex: 2 },
+  // Stick Directions
+  // Index 1 = Left Stick, Index 2 = Right Stick
+  // SubIndex: 1=Up, 2=Right, 3=Down, 4=Left (AntiMicroX Standard)
+  'LS_Up': { type: 'stick', index: 1, subIndex: 1 },
+  'LS_Right': { type: 'stick', index: 1, subIndex: 2 },
+  'LS_Down': { type: 'stick', index: 1, subIndex: 3 },
+  'LS_Left': { type: 'stick', index: 1, subIndex: 4 },
+  'RS_Up': { type: 'stick', index: 2, subIndex: 1 },
+  'RS_Right': { type: 'stick', index: 2, subIndex: 2 },
+  'RS_Down': { type: 'stick', index: 2, subIndex: 3 },
+  'RS_Left': { type: 'stick', index: 2, subIndex: 4 },
 };
 const escapeXml = (unsafe: string): string => {
   return unsafe.replace(/[<>&'"]/g, (c) => {
@@ -118,7 +129,6 @@ export const generateAntiMicroXXML = (profile: Profile, actions: Action[]): stri
   console.log('Sets Count:', profile.sets.length);
   console.log('Actions Count:', actions.length);
   console.log('Macros Count:', profile.macros.length);
-  console.log('Profile Data Snapshot:', JSON.parse(JSON.stringify(profile)));
   console.groupEnd();
   if (!profile.sets || profile.sets.length === 0) {
       const errorMsg = "Export failed: Profile has 0 sets. This indicates a state desync or corrupted project.";

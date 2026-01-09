@@ -3,6 +3,7 @@ import { useProfileStore } from '@/store/profileStore';
 import { CONTROLLER_BUTTONS, ControllerButtonId } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 // Refined positions for the new vector layout
 // Coordinates are percentages relative to the container
 const BUTTON_POSITIONS: Record<ControllerButtonId, { top: string; left: string; width?: string; height?: string; shape?: string; labelClass?: string }> = {
@@ -15,9 +16,20 @@ const BUTTON_POSITIONS: Record<ControllerButtonId, { top: string; left: string; 
   'Guide': { top: '22%', left: '50%', width: '48px', height: '48px', shape: 'rounded-full' },
   'Back': { top: '36%', left: '42%', width: '24px', height: '24px', shape: 'rounded-full' }, // View
   'Start': { top: '36%', left: '58%', width: '24px', height: '24px', shape: 'rounded-full' }, // Menu
-  // Sticks
+  // Sticks (Click)
   'LS': { top: '36%', left: '22%', width: '64px', height: '64px', shape: 'rounded-full' },
   'RS': { top: '56%', left: '64%', width: '64px', height: '64px', shape: 'rounded-full' },
+  // Stick Directions (New)
+  // LS Center is 22%, 36%
+  'LS_Up': { top: '29%', left: '22%', width: '24px', height: '24px', shape: 'rounded-sm' },
+  'LS_Down': { top: '43%', left: '22%', width: '24px', height: '24px', shape: 'rounded-sm' },
+  'LS_Left': { top: '36%', left: '15%', width: '24px', height: '24px', shape: 'rounded-sm' },
+  'LS_Right': { top: '36%', left: '29%', width: '24px', height: '24px', shape: 'rounded-sm' },
+  // RS Center is 64%, 56%
+  'RS_Up': { top: '49%', left: '64%', width: '24px', height: '24px', shape: 'rounded-sm' },
+  'RS_Down': { top: '63%', left: '64%', width: '24px', height: '24px', shape: 'rounded-sm' },
+  'RS_Left': { top: '56%', left: '57%', width: '24px', height: '24px', shape: 'rounded-sm' },
+  'RS_Right': { top: '56%', left: '71%', width: '24px', height: '24px', shape: 'rounded-sm' },
   // D-Pad (Bottom Left)
   'DPadUp': { top: '52%', left: '34%', width: '24px', height: '28px', shape: 'rounded-t-md' },
   'DPadDown': { top: '62%', left: '34%', width: '24px', height: '28px', shape: 'rounded-b-md' },
@@ -41,6 +53,13 @@ export function ControllerSchematic() {
   const profile = useProfileStore(s => s.profile);
   const actions = useProfileStore(s => s.actions);
   const activeSet = profile.sets.find(s => s.id === activeSetId);
+  const getDirectionIcon = (id: string) => {
+    if (id.includes('Up')) return <ChevronUp className="w-3 h-3" />;
+    if (id.includes('Down')) return <ChevronDown className="w-3 h-3" />;
+    if (id.includes('Left')) return <ChevronLeft className="w-3 h-3" />;
+    if (id.includes('Right')) return <ChevronRight className="w-3 h-3" />;
+    return null;
+  };
   return (
     <TooltipProvider>
       <div className="w-full max-w-5xl mx-auto p-4 md:p-8 flex items-center justify-center">
@@ -129,7 +148,8 @@ export function ControllerSchematic() {
                         btn.type === 'stick' && "border-2 bg-zinc-900/80",
                         btn.type === 'face' && "font-bold text-lg",
                         btn.type === 'trigger' && "bg-zinc-800",
-                        btn.type === 'paddle' && "border-dashed border-zinc-600 opacity-80 hover:opacity-100"
+                        btn.type === 'paddle' && "border-dashed border-zinc-600 opacity-80 hover:opacity-100",
+                        btn.type === 'stick_dir' && "bg-zinc-900/90 border-zinc-600 hover:bg-zinc-800"
                       )}
                       style={{
                         top: pos.top,
@@ -146,11 +166,14 @@ export function ControllerSchematic() {
                            isSelected ? "bg-amber-600 border-amber-400" : "bg-zinc-800"
                          )} />
                       )}
+                      {/* Directional Icons */}
+                      {btn.type === 'stick_dir' && getDirectionIcon(btn.id)}
                       {/* Label */}
                       <span className={cn(
                         "relative z-10 pointer-events-none select-none",
-                        btn.type === 'stick' && "hidden", // Hide label on stick itself, maybe show tooltip?
+                        btn.type === 'stick' && "hidden", // Hide label on stick itself
                         btn.type === 'dpad' && "hidden", // Hide label on dpad segments
+                        btn.type === 'stick_dir' && "hidden", // Hide label on stick directions (using icons)
                         pos.labelClass
                       )}>
                         {btn.type === 'face' ? btn.label : (
@@ -178,7 +201,7 @@ export function ControllerSchematic() {
         </div>
         {/* Legend / Help Text */}
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-zinc-600 text-xs font-mono uppercase tracking-widest opacity-50">
-          Interactive Schematic • Click to Configure
+          Interactive Schematic �� Click to Configure
         </div>
       </div>
     </TooltipProvider>
