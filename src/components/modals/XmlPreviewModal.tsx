@@ -27,11 +27,18 @@ export function XmlPreviewModal({ isOpen, onClose }: XmlPreviewModalProps) {
       }
     }
   }, [isOpen, profile, actions]);
-  const handleCopy = () => {
-    navigator.clipboard.writeText(xmlContent);
-    setCopied(true);
-    toast.success("XML copied to clipboard");
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(xmlContent);
+      setCopied(true);
+      toast.success("XML copied to clipboard");
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+      toast.error("Failed to copy to clipboard", {
+        description: "Your browser might be blocking clipboard access. Please copy manually."
+      });
+    }
   };
   const handleDownload = () => {
     const blob = new Blob([xmlContent], { type: 'application/xml;charset=utf-8' });

@@ -23,7 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { TooltipProvider } from '@/components/ui/tooltip';
 export function SetManager() {
   // UI State Hooks (Reactive)
   const profile = useProfileStore(s => s.profile);
@@ -71,7 +71,12 @@ export function SetManager() {
       if (saved) {
         toast.success('Profile exported successfully!');
       } else {
-        toast.info('Export cancelled');
+        // If it returned false, it might be cancelled or failed.
+        // We don't want to annoy user if they just cancelled, but if it failed silently...
+        // The saveFileAs logic handles cancellation by returning false.
+        // We can assume if they cancelled, they know it.
+        // But if it failed, we might want to suggest the other button.
+        console.log('Export cancelled or failed silently');
       }
     } catch (error) {
       console.error("Export Error:", error);
@@ -94,8 +99,8 @@ export function SetManager() {
       const blob = new Blob([xml], { type: 'application/xml;charset=utf-8' });
       // Calculate size for user confidence
       const sizeInBytes = blob.size;
-      const sizeDisplay = sizeInBytes > 1024 
-        ? `${(sizeInBytes / 1024).toFixed(1)} KB` 
+      const sizeDisplay = sizeInBytes > 1024
+        ? `${(sizeInBytes / 1024).toFixed(1)} KB`
         : `${sizeInBytes} bytes`;
       console.log(`Attempting download. Size: ${sizeDisplay}`);
       const started = await downloadFile(blob, 'profile.amgp');
@@ -105,7 +110,7 @@ export function SetManager() {
         });
       } else {
         toast.error('Download failed to start', {
-            description: 'Please try the "Export" button instead.'
+            description: 'Please check browser permissions.'
         });
       }
     } catch (error) {
@@ -200,9 +205,9 @@ export function SetManager() {
               <Layers className="w-4 h-4" />
               Mission Sets
               </h2>
-              <Button 
-                  variant="ghost" 
-                  size="icon" 
+              <Button
+                  variant="ghost"
+                  size="icon"
                   className="h-6 w-6 text-zinc-500 hover:text-amber-500"
                   onClick={() => setSettingsOpen(true)}
                   title="Controller Settings"
@@ -310,30 +315,24 @@ export function SetManager() {
                       <FileCode className="w-4 h-4 mr-2" />
                       View XML Code
                   </Button>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col gap-2">
                     <Button
-                        className="flex-1 bg-amber-600 hover:bg-amber-700 text-white"
+                        className="w-full bg-amber-600 hover:bg-amber-700 text-white"
                         onClick={handleExportXML}
-                        title="Export .amgp (Ctrl+E)"
+                        title="Save As... (Ctrl+E)"
                     >
                         <Download className="w-4 h-4 mr-2" />
-                        Export
+                        Save As...
                     </Button>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="bg-zinc-900 border-zinc-700 text-zinc-400 hover:text-amber-500 hover:border-amber-500"
-                          onClick={handleDirectDownload}
-                        >
-                          <ArrowDownToLine className="w-4 h-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Quick Download (Force Browser Download)</p>
-                      </TooltipContent>
-                    </Tooltip>
+                    <Button
+                        variant="outline"
+                        className="w-full bg-zinc-900 border-zinc-700 text-zinc-400 hover:text-amber-500 hover:border-amber-500"
+                        onClick={handleDirectDownload}
+                        title="Force Download"
+                    >
+                        <ArrowDownToLine className="w-4 h-4 mr-2" />
+                        Quick Download
+                    </Button>
                   </div>
               </div>
               <Button
