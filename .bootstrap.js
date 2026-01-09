@@ -84,7 +84,7 @@ function runSetupCommands() {
     "bun add @dnd-kit/utilities",
     "bun add @dnd-kit/core @dnd-kit/utilities",
     "bun add @radix-ui/react-tooltip",
-    "bun add -D electron-builder",
+    "bun add -D concurrently wait-on electron electron-builder",
     "bun add react-hotkeys-hook",
     "bun add electron-builder --dev",
     "bun add date-fns"
