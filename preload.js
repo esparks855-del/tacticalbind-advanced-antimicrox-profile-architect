@@ -1,11 +1,10 @@
-import { ipcRenderer } from 'electron';
+const { contextBridge, ipcRenderer } = require('electron');
+console.log('TacticalBind Architect: Preload script loaded.');
+contextBridge.exposeInMainWorld('electronAPI', {
+  saveFile: (content, filename) => ipcRenderer.invoke('save-file', content, filename),
+  openFile: (filters) => ipcRenderer.invoke('open-file', filters)
+});
 window.addEventListener('DOMContentLoaded', () => {
-  console.log('TacticalBind Architect: Preload script loaded.');
-  // Expose safe APIs to the renderer
-  window.electronAPI = {
-    saveFile: (content, filename) => ipcRenderer.invoke('save-file', content, filename),
-    openFile: (filters) => ipcRenderer.invoke('open-file', filters)
-  };
   const replaceText = (selector, text) => {
     const element = document.getElementById(selector)
     if (element) element.innerText = text
