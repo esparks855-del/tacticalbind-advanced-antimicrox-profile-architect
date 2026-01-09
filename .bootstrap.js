@@ -83,7 +83,8 @@ function runSetupCommands() {
     "bun add xml-js@^1.6.11",
     "bun add @dnd-kit/utilities",
     "bun add @dnd-kit/core @dnd-kit/utilities",
-    "bun add @radix-ui/react-tooltip"
+    "bun add @radix-ui/react-tooltip",
+    "bun add -D electron electron-builder"
 ];
     
     if (commands.length === 0) {
