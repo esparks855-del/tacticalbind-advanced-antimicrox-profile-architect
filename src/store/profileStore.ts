@@ -37,6 +37,7 @@ interface ProfileState {
   deleteMacro: (id: string) => void;
   // Settings
   updateDeadzone: (axis: string, value: number) => void;
+  updateGeneralConfig: (config: { turboInterval?: number }) => void;
   // Persistence Actions
   markSaved: () => void;
   setBackupHandle: (handle: FileSystemFileHandle | null) => void;
@@ -44,6 +45,7 @@ interface ProfileState {
   getSnapshot: () => { profile: Profile, actions: Action[] };
 }
 const INITIAL_SET_ID = 'set-1';
+const DEFAULT_TURBO_INTERVAL = 100;
 const createEmptySet = (id: string, name: string): Set => {
   const mappings: Record<string, ButtonMapping> = {};
   CONTROLLER_BUTTONS.forEach(btn => {
@@ -66,7 +68,10 @@ export const useProfileStore = create<ProfileState>()(
       profile: {
         sets: [createEmptySet(INITIAL_SET_ID, 'Set 1')],
         macros: [],
-        axisConfig: {}
+        axisConfig: {},
+        generalConfig: {
+          turboInterval: DEFAULT_TURBO_INTERVAL
+        }
       },
       activeSetId: INITIAL_SET_ID,
       selectedButtonId: null,
@@ -94,6 +99,10 @@ export const useProfileStore = create<ProfileState>()(
             profile = { ...data.profile, axisConfig };
             delete profile.deadzones;
         }
+        // Ensure generalConfig exists
+        if (!profile.generalConfig) {
+          profile.generalConfig = { turboInterval: DEFAULT_TURBO_INTERVAL };
+        }
         return {
             profile,
             actions: data.actions,
@@ -107,7 +116,8 @@ export const useProfileStore = create<ProfileState>()(
         profile: {
             sets: [createEmptySet(INITIAL_SET_ID, 'Set 1')],
             macros: [],
-            axisConfig: {}
+            axisConfig: {},
+            generalConfig: { turboInterval: DEFAULT_TURBO_INTERVAL }
         },
         actions: [],
         activeSetId: INITIAL_SET_ID,
@@ -169,7 +179,7 @@ export const useProfileStore = create<ProfileState>()(
         };
         const newSets = [...state.profile.sets];
         newSets[setIndex] = newSet;
-        return { 
+        return {
             profile: { ...state.profile, sets: newSets },
             ...touch(state)
         };
@@ -193,7 +203,7 @@ export const useProfileStore = create<ProfileState>()(
         };
         const newSets = [...state.profile.sets];
         newSets[setIndex] = newSet;
-        return { 
+        return {
             profile: { ...state.profile, sets: newSets },
             ...touch(state)
         };
@@ -217,7 +227,7 @@ export const useProfileStore = create<ProfileState>()(
         };
         const newSets = [...state.profile.sets];
         newSets[setIndex] = newSet;
-        return { 
+        return {
             profile: { ...state.profile, sets: newSets },
             ...touch(state)
         };
@@ -237,7 +247,7 @@ export const useProfileStore = create<ProfileState>()(
         };
         const newSets = [...state.profile.sets];
         newSets[setIndex] = newSet;
-        return { 
+        return {
             profile: { ...state.profile, sets: newSets },
             ...touch(state)
         };
@@ -272,6 +282,16 @@ export const useProfileStore = create<ProfileState>()(
                 ...state.profile.axisConfig?.[axis],
                 deadZone: value
             }
+          }
+        },
+        ...touch(state)
+      })),
+      updateGeneralConfig: (config) => set((state) => ({
+        profile: {
+          ...state.profile,
+          generalConfig: {
+            ...state.profile.generalConfig,
+            ...config
           }
         },
         ...touch(state)

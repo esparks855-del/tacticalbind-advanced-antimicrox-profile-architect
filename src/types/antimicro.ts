@@ -35,8 +35,12 @@ export interface AxisConfig {
   maxZone?: number;
   diagonalRange?: number;
 }
+export interface GeneralConfig {
+  turboInterval?: number;
+}
 export interface Profile {
   sets: Set[];
   macros: Macro[];
   axisConfig: Record<string, AxisConfig>;
+  generalConfig?: GeneralConfig;
 }

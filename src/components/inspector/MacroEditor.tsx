@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MacroStep } from '@/types/antimicro';
-import { Plus, Trash2, Clock, Keyboard, MousePointer, Info, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Clock, Keyboard, MousePointer, Info, AlertCircle, Timer } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 interface MacroEditorProps {
   isOpen: boolean;
@@ -20,6 +20,16 @@ export function MacroEditor({ isOpen, onClose, onSave, initialName = '', initial
   const [steps, setSteps] = useState<MacroStep[]>(initialSteps);
   const [newStepType, setNewStepType] = useState<'key' | 'delay' | 'mouse'>('key');
   const [newStepValue, setNewStepValue] = useState('');
+  // Calculate total duration in milliseconds
+  const totalDuration = useMemo(() => {
+    return steps.reduce((acc, step) => {
+      if (step.type === 'delay') {
+        const val = parseInt(String(step.value), 10);
+        return acc + (isNaN(val) ? 0 : val);
+      }
+      return acc;
+    }, 0);
+  }, [steps]);
   const addStep = () => {
     if (!newStepValue) return;
     setSteps([...steps, { type: newStepType, value: newStepValue }]);
@@ -38,8 +48,8 @@ export function MacroEditor({ isOpen, onClose, onSave, initialName = '', initial
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
         <DialogContent className="sm:max-w-[550px] bg-zinc-950 border-zinc-800 text-zinc-100">
             <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-                <Info className="w-5 h-5 text-amber-500" />
+            <DialogTitle className="flex items-center gap-2 text-amber-500">
+                <Info className="w-5 h-5" />
                 Macro Editor
             </DialogTitle>
             </DialogHeader>
@@ -63,7 +73,13 @@ export function MacroEditor({ isOpen, onClose, onSave, initialName = '', initial
             <div className="space-y-2">
                 <div className="flex items-center justify-between">
                     <Label>Sequence Steps</Label>
-                    <span className="text-xs text-zinc-500">{steps.length} steps</span>
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1.5 text-xs font-mono text-amber-500 bg-amber-900/20 px-2 py-1 rounded border border-amber-900/40">
+                            <Timer className="w-3 h-3" />
+                            <span>{totalDuration}ms</span>
+                        </div>
+                        <span className="text-xs text-zinc-500">{steps.length} steps</span>
+                    </div>
                 </div>
                 <ScrollArea className="h-[200px] rounded-md border border-zinc-800 bg-zinc-900 p-2">
                 {steps.length === 0 ? (

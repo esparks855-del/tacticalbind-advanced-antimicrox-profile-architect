@@ -106,10 +106,10 @@ const generateSlotXML = (slot: Slot, profile: Profile, actions: Action[]): strin
   xml += '            </slot>\n';
   return xml;
 };
-const generateButtonBlock = (index: number, slotsXML: string): string => {
+const generateButtonBlock = (index: number, slotsXML: string, turboInterval: number): string => {
   return `    <button index="${index}">
         <toggle>0</toggle>
-        <turbointerval>0</turbointerval>
+        <turbointerval>${turboInterval}</turbointerval>
         <useturbo>0</useturbo>
         <mousespeedx>0</mousespeedx>
         <mousespeedy>0</mousespeedy>
@@ -135,6 +135,8 @@ export const generateAntiMicroXXML = (profile: Profile, actions: Action[]): stri
       console.error(errorMsg);
       throw new Error(errorMsg);
   }
+  // Get global config
+  const turboInterval = profile.generalConfig?.turboInterval ?? 100;
   let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
   xml += '<gamecontroller configversion="19" appversion="2.20.2">\n';
   xml += `<sdlname>${APP_NAME} Controller</sdlname>\n`;
@@ -186,7 +188,7 @@ export const generateAntiMicroXXML = (profile: Profile, actions: Action[]): stri
         });
         if (!slotsXML) return; // Skip empty mappings
         if (target.type === 'button') {
-            buttonMappings[target.index] = generateButtonBlock(target.index, slotsXML);
+            buttonMappings[target.index] = generateButtonBlock(target.index, slotsXML, turboInterval);
         } else if (target.type === 'stick') {
             if (target.subIndex) stickMappings[target.index].buttons[target.subIndex] = slotsXML;
         } else if (target.type === 'trigger') {
